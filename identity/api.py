@@ -35,24 +35,16 @@ from neo.Implementations.Blockchains.LevelDB.LevelDBBlockchain import LevelDBBlo
 from neo.Core.Blockchain import Blockchain
 from neo.Settings import settings
 
-from identity.idsmartcontract import IdentitySmartContract
+from identity.sc_invoke_flow import IdentitySmartContract
 
 
 # Set constants from env vars or use default
 API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
 CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "d63a0b437a16579288361ccb593570e5c5f71149")
 
-# PROTOCOL_CONFIG = os.path.join(parent_dir, "shared-privnet.json")
-# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "neo-privnet.wallet"))
-# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
-
 PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
 WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
 WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
-
-# PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.testnet.json")
-# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "imusify-testnet.wallet"))
-# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "asdasdasdasd")
 
 print(PROTOCOL_CONFIG, API_PORT, CONTRACT_HASH, WALLET_FILE, WALLET_PWD)
 
@@ -147,29 +139,57 @@ def pg_root(request):
 @catch_exceptions
 @json_response
 def find_transaction(request, tx_hash):
-    logger.info("find_transaction")
+    logger.info("/identity/tx/<tx_hash>")
     found = smart_contract.find_tx(tx_hash)
     return {"result": found}
 
 
-@app.route('/identity/get_record_count', methods=['GET'])
+@app.route('/identity/records/<record_id>', methods=['GET'])
 @authenticated
 @catch_exceptions
 @json_response
-def get_record_count(request):
-    logger.info("get_record_count")
-    result, tx_unconfirmed, tx = smart_contract.invoke("getRecordCount")
-    return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx}
+def get_record_by_id(request, record_id):
+    logger.info("/identity/records/<record_id>")
+    result, tx_unconfirmed, tx = smart_contract.test_invoke("getRecord", record_id)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
 
 
-@app.route('/identity/get_record_list', methods=['GET'])
+@app.route('/identity/users/', methods=['GET'])
 @authenticated
 @catch_exceptions
 @json_response
-def get_record_list(request):
-    logger.info("get_record_list")
-    result, tx_unconfirmed, tx = smart_contract.invoke("getRecordList")
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx}
+def get_users(request):
+    logger.info("/identity/users/")
+    result, tx_unconfirmed, tx = smart_contract.test_invoke("getUserList")
+    return {"result": result, "tx_unconfirmed": tx_unconfirmed}
+
+
+@app.route('/identity/users/<user_id>/records/', methods=['GET'])
+@authenticated
+@catch_exceptions
+@json_response
+def get_records_by_user_id(request, user_id):
+    logger.info("/identity/users/<user_id>/records/")
+    result, tx_unconfirmed, tx = smart_contract.test_invoke("getRecordIdList", user_id)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+
+
+@app.route('/identity/users/<user_id>/records/<record_id>', methods=['POST'])
+@authenticated
+@catch_exceptions
+@json_response
+def inser_record(request, user_id, record_id):
+    logger.info("/identity/users/<user_id>/records/<record_id>")
+    return "Not implemented yet"
+
+
+@app.route('/identity/users/<user_id>/records/<record_id>', methods=['DELETE'])
+@authenticated
+@catch_exceptions
+@json_response
+def remove_record(request, user_id, record_id):
+    logger.info("/identity/users/<user_id>/records/<record_id>")
+    return "Not implemented yet"
 
 
 if __name__ == "__main__":
