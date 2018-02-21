@@ -18,12 +18,12 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke d63a0b437a16579288361ccb593570e5c5f71149 getRecord [1]
-neo> testinvoke d63a0b437a16579288361ccb593570e5c5f71149 getUserList []
-neo> testinvoke d63a0b437a16579288361ccb593570e5c5f71149 getRecordList ["ABC"]
-neo> testinvoke d63a0b437a16579288361ccb593570e5c5f71149 getRecordIdList ["ABC"]
-neo> testinvoke d63a0b437a16579288361ccb593570e5c5f71149 createRecord ["ABC","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke d63a0b437a16579288361ccb593570e5c5f71149 deleteRecord ["ABC",1]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecord [1]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getUserList []
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordList ["ABC"]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordIdList ["ABC"]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createRecord ["ABC","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteRecord ["ABC",1]
 
 
 """
@@ -164,7 +164,7 @@ def InsertRecord(usr_adr, data_pub_key, data_encr):
         Notify(msg)
 
     context = GetContext()
-    record_data = [data_pub_key, data_encr]
+    record_data = [usr_adr, data_pub_key, data_encr]
     record_data_serialized = serialize_array(record_data)
     record_id = next_id()
     record_key = concat(RECORD_ID_PREFIX, record_id)

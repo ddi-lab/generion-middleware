@@ -119,6 +119,7 @@ class IdentitySmartContract():
 
         # Wait until wallet is synced:
         while True:
+            # TODO rebuild wallet ???
             percent_synced = int(100 * self.wallet._current_height / Blockchain.Default().Height)
             if percent_synced > 99:
                 break

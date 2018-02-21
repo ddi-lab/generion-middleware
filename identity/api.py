@@ -150,7 +150,7 @@ def find_transaction(request, tx_hash):
 @json_response
 def get_record_by_id(request, record_id):
     logger.info("/identity/records/<record_id>")
-    result, tx_unconfirmed, tx = smart_contract.test_invoke("getRecord", record_id)
+    result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -160,34 +160,34 @@ def get_record_by_id(request, record_id):
 @json_response
 def get_users(request):
     logger.info("/identity/users/")
-    result, tx_unconfirmed, tx = smart_contract.test_invoke("getUserList")
+    result, tx_unconfirmed = smart_contract.test_invoke("getUserList")
     return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
-@app.route('/identity/users/<user_id>/records/', methods=['GET'])
+@app.route('/identity/users/<user_adr>/records/', methods=['GET'])
 @authenticated
 @catch_exceptions
 @json_response
-def get_records_by_user_id(request, user_id):
+def get_records_by_user_id(request, user_adr):
     logger.info("/identity/users/<user_id>/records/")
-    result, tx_unconfirmed, tx = smart_contract.test_invoke("getRecordIdList", user_id)
+    result, tx_unconfirmed = smart_contract.test_invoke("getRecordIdList", user_adr)
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
 
 
-@app.route('/identity/users/<user_id>/records/<record_id>', methods=['POST'])
+@app.route('/identity/users/<user_adr>/records/', methods=['POST'])
 @authenticated
 @catch_exceptions
 @json_response
-def inser_record(request, user_id, record_id):
+def inser_record(request, user_adr, record_id):
     logger.info("/identity/users/<user_id>/records/<record_id>")
     return "Not implemented yet"
 
 
-@app.route('/identity/users/<user_id>/records/<record_id>', methods=['DELETE'])
+@app.route('/identity/users/<user_adr>/records/<record_id>', methods=['DELETE'])
 @authenticated
 @catch_exceptions
 @json_response
-def remove_record(request, user_id, record_id):
+def remove_record(request, user_adr, record_id):
     logger.info("/identity/users/<user_id>/records/<record_id>")
     return "Not implemented yet"
 
