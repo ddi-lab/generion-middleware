@@ -3,12 +3,17 @@ Identity Smart Contract
 ===================================
 Testing:
 
-neo> build identity/sc/access-store.py test 0710 05 True False getRecord [1]
 neo> build identity/sc/access-store.py test 0710 05 True False getUserList []
-neo> build identity/sc/access-store.py test 0710 05 True False getRecordList ["ABC"]
-neo> build identity/sc/access-store.py test 0710 05 True False getRecordIdList ["ABC"]
-neo> build identity/sc/access-store.py test 0710 05 True False createRecord ["ABC","DATA_PUB_KEY","DATA_ENCR"]
-neo> build identity/sc/access-store.py test 0710 05 True False deleteRecord ["ABC",1]
+neo> build identity/sc/access-store.py test 0710 05 True False getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> build identity/sc/access-store.py test 0710 05 True False getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> build identity/sc/access-store.py test 0710 05 True False createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> build identity/sc/access-store.py test 0710 05 True False getRecord [1]
+neo> build identity/sc/access-store.py test 0710 05 True False deleteRecord [1]
+neo> build identity/sc/access-store.py test 0710 05 True False getOrderList []
+neo> build identity/sc/access-store.py test 0710 05 True False getOrderIdList []
+neo> build identity/sc/access-store.py test 0710 05 True False createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",10]
+neo> build identity/sc/access-store.py test 0710 05 True False getOrder [1]
+neo> build identity/sc/access-store.py test 0710 05 True False deleteOrder [1]
 
 
 Importing:
@@ -18,13 +23,17 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecord [1]
 neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getUserList []
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordList ["ABC"]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordIdList ["ABC"]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createRecord ["ABC","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteRecord ["ABC",1]
-
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecord [1]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteRecord [1]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrderList []
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrderIdList []
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",10]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrder [1]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteOrder [1]
 
 """
 from boa.blockchain.vm.Neo.Runtime import Log, Notify
@@ -37,9 +46,14 @@ OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'
 
 # Constants
 USR_ADR_LIST = 'usr_adr_list'
+
 RECORD_ID_LIST_PREFIX = 'rcd_id_list_'
 RECORD_ID_PREFIX = 'rid_'
-NEXT_ID_KEY = 'next_id'
+NEXT_RECORD_ID_KEY = 'next_rcd_id'
+
+ORDER_ID_LIST_PREFIX = 'ord_id_list_'
+ORDER_ID_PREFIX = 'ord_'
+NEXT_ORDER_ID_KEY = 'next_ord_id'
 
 # Messages
 UNKNOWN_OP = 'unknown operation'
@@ -105,10 +119,58 @@ def Main(operation, args):
             return WRONG_ARGS
 
     elif operation == 'deleteRecord':
-        if len(args) == 2:
+        if len(args) == 1:
+            record_id = args[0]
+            r = DeleteRecord(record_id)
+            return r
+        else:
+            return WRONG_ARGS
+
+    # <<< ORDER CRUD METHODS >>>
+    elif operation == 'getOrderList':
+        if len(args) == 0:
+            r = GetOrderList()
+            return r
+        else:
+            return WRONG_ARGS
+
+    elif operation == 'getOrderIdList':
+        if len(args) == 0:
+            r = GetOrderIdList()
+            return r
+        else:
+            return WRONG_ARGS
+
+    elif operation == 'createOrder':
+        if len(args) == 3:
             usr_adr = args[0]
-            record_id = args[1]
-            r = DeleteRecord(usr_adr, record_id)
+            record_id_list = args[1]
+            price = args[2]
+            r = InsertOrder(usr_adr, record_id_list, price)
+            return r
+        else:
+            return WRONG_ARGS
+
+    if operation == 'getOrder':
+        if len(args) == 1:
+            order_id = args[0]
+            r = GetOrder(order_id)
+            return r
+        else:
+            return WRONG_ARGS
+
+    elif operation == 'deleteOrder':
+        if len(args) == 1:
+            order_id = args[0]
+            r = DeleteOrder(order_id)
+            return r
+        else:
+            return WRONG_ARGS
+
+    # <<< TRANSFER METHODS >>>
+    elif operation == 'transferTokens':
+        if len(args) == 0:
+            r = True
             return r
         else:
             return WRONG_ARGS
@@ -146,7 +208,7 @@ def GetRecordIdList(usr_adr):
 
 
 def InsertRecord(usr_adr, data_pub_key, data_encr):
-    if not CheckWitness(OWNER):
+    if not check_permission(usr_adr):
         Log("Must be owner to insert a record")
         return False
 
@@ -166,7 +228,7 @@ def InsertRecord(usr_adr, data_pub_key, data_encr):
     context = GetContext()
     record_data = [usr_adr, data_pub_key, data_encr]
     record_data_serialized = serialize_array(record_data)
-    record_id = next_id()
+    record_id = next_id(NEXT_RECORD_ID_KEY)
     record_key = concat(RECORD_ID_PREFIX, record_id)
     Put(context, record_key, record_data_serialized)
 
@@ -192,8 +254,14 @@ def GetRecord(record_id):
     return record
 
 
-def DeleteRecord(usr_adr, record_id):
-    if not CheckWitness(OWNER):
+def DeleteRecord(record_id):
+    record = GetRecord(record_id)
+    if not record:
+        Log("Record doesn't exist")
+        return False
+
+    usr_adr = record[0]
+    if not check_permission(usr_adr):
         Log("Must be owner to delete a record")
         return False
 
@@ -220,19 +288,135 @@ def DeleteRecord(usr_adr, record_id):
         return False
 
 
-# <<< AUXILIARY METHODS >>>
-def next_id():
+def GetOrderList():
+    orders_id = GetOrderIdList()
+    orders = []
+    collection_len = len(orders_id)
+    for i in range(0, collection_len):
+        id = orders_id[i]
+        single_order = GetOrder(id)
+        orders.append(single_order)
+    return orders
+
+
+def GetOrderIdList():
     context = GetContext()
-    id = Get(context, NEXT_ID_KEY)
+    orders_serialized = Get(context, ORDER_ID_LIST_PREFIX)
+    if not orders_serialized:
+        return []
+    orders_id = deserialize_bytearray(orders_serialized)
+    return orders_id
+
+
+def InsertOrder(usr_adr, record_id_list_str, price):
+    if not check_permission(usr_adr):
+        Log("Must be owner to create an order")
+        return False
+
+    record_id_list = str_to_list(record_id_list_str)
+    if len(record_id_list) <= 0:
+        Log("Empty record_id_list")
+        return False
+
+    record_incorrect = False
+    for record_id in record_id_list:
+        record = GetRecord(record_id)
+        if (not record) or (record[0] != usr_adr):
+            record_incorrect = True
+    if record_incorrect:
+        Log("Incorrect record_id_list")
+        return False
+
+    context = GetContext()
+    order_data = [usr_adr, record_id_list_str, price, 0]
+    order_data_serialized = serialize_array(order_data)
+    order_id = next_id(NEXT_ORDER_ID_KEY)
+    order_key = concat(ORDER_ID_PREFIX, order_id)
+    Put(context, order_key, order_data_serialized)
+
+    orders_id = GetOrderIdList()
+    orders_id.append(order_id)
+    orders_serialized = serialize_array(orders_id)
+    order_id_list_key = concat(ORDER_ID_LIST_PREFIX, usr_adr)
+    Put(context, order_id_list_key, orders_serialized)
+
+    msg = concat("New order: ", order_id)
+    Notify(msg)
+    return True
+
+
+def GetOrder(order_id):
+    context = GetContext()
+    order_key = concat(ORDER_ID_PREFIX, order_id)
+    order_serialized = Get(context, order_key)
+    if not order_serialized:
+        Log("Order doesn't exist")
+        return False
+    order = deserialize_bytearray(order_serialized)
+    return order
+
+
+def DeleteOrder(order_id):
+    order = GetOrder(order_id)
+    if not order:
+        Log("Order doesn't exist")
+        return False
+
+    usr_adr = order[0]
+    if not check_permission(usr_adr):
+        Log("Must be owner to delete an order")
+        return False
+
+    orders_id = GetOrderIdList()
+    found = False
+    i = 0
+    while i < len(orders_id):
+        if orders_id[i] == order_id:
+            found = True
+            orders_id.remove(i)  # pop by index
+            i = len(orders_id) + 1  # break
+        i += 1
+    if found:
+
+        orders_serialized = serialize_array(orders_id)
+        order_id_list_key = concat(ORDER_ID_LIST_PREFIX, usr_adr)
+        context = GetContext()
+        Put(context, order_id_list_key, orders_serialized)
+
+        order_key = concat(ORDER_ID_PREFIX, order_id)
+        Put(context, order_key, '')
+        return True
+    else:
+        Log("Order doesn't exist")
+        return False
+
+
+# <<< AUXILIARY METHODS >>>
+def next_id(key):
+    context = GetContext()
+    id = Get(context, key)
     if not id:
         Log("Next id doesn't exist yet.")
         id = INITIAL_ID
     next_value = id + 1
-    Put(context, NEXT_ID_KEY, next_value)
+    Put(context, key, next_value)
     return id
 
 
+def check_permission(usr_adr):
+    if CheckWitness(OWNER):
+        return True
+    if CheckWitness(usr_adr):
+        return True
+    return False
+
+
 # <<< UTILS >>>
+def str_to_list(record_id_list_raw):
+    # TODO implement: "1:2:3" -> [1,2,3]
+    return []
+
+
 def deserialize_bytearray(data):
 
     # ok this is weird.  if you remove this print statement, it stops working :/
