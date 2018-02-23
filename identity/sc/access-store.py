@@ -11,9 +11,10 @@ neo> build identity/sc/access-store.py test 0710 05 True False getRecord [1]
 neo> build identity/sc/access-store.py test 0710 05 True False deleteRecord [1]
 neo> build identity/sc/access-store.py test 0710 05 True False getOrderList []
 neo> build identity/sc/access-store.py test 0710 05 True False getOrderIdList []
-neo> build identity/sc/access-store.py test 0710 05 True False createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",10]
+neo> build identity/sc/access-store.py test 0710 05 True False createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
 neo> build identity/sc/access-store.py test 0710 05 True False getOrder [1]
 neo> build identity/sc/access-store.py test 0710 05 True False deleteOrder [1]
+neo> build identity/sc/access-store.py test 0710 05 True False purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 
 Importing:
@@ -31,20 +32,27 @@ neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecord [1]
 neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteRecord [1]
 neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrderList []
 neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrderIdList []
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",10]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
 neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrder [1]
 neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteOrder [1]
+neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.blockchain.vm.Neo.Runtime import Log, Notify
 from boa.blockchain.vm.Neo.Runtime import CheckWitness
 from boa.blockchain.vm.Neo.Storage import GetContext, Get, Put, Delete
-from boa.code.builtins import concat, list, range, take, substr
+from boa.blockchain.vm.Neo.Output import GetScriptHash, GetValue, GetAssetId
+from boa.blockchain.vm.Neo.Action import RegisterAction
+from boa.blockchain.vm.Neo.Transaction import Transaction, GetReferences, GetOutputs,GetUnspentCoins
+from boa.blockchain.vm.System.ExecutionEngine import GetScriptContainer
+from boa.code.builtins import concat, list, range, substr
 
-# Script hash of the token owner
+# Script hash of the contract owner
 OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'
 
 # Constants
+NEO_ASSET_ID = b'\x9b|\xff\xda\xa6t\xbe\xae\x0f\x93\x0e\xbe`\x85\xaf\x90\x93\xe5\xfeV\xb3J\\"\x0c\xcd\xcfn\xfc3o\xc5'
+
 USR_ADR_LIST = 'usr_adr_list'
 
 RECORD_ID_LIST_PREFIX = 'rcd_id_list_'
@@ -61,8 +69,10 @@ WRONG_ARGS = 'wrong arguments'
 
 # Const values
 INITIAL_ID = 1
-SOME_VALUE = '?'
+COMMISSION = 10
 
+# Events
+DispatchTransferEvent = RegisterAction('transfer', 'from', 'to', 'amount')
 
 def Main(operation, args):
     """
@@ -168,9 +178,11 @@ def Main(operation, args):
             return WRONG_ARGS
 
     # <<< TRANSFER METHODS >>>
-    elif operation == 'transferTokens':
-        if len(args) == 0:
-            r = True
+    elif operation == 'purchaseData':
+        if len(args) == 2:
+            order_id = args[0]
+            pub_key = args[1]
+            r = PurchaseData(order_id, pub_key)
             return r
         else:
             return WRONG_ARGS
@@ -281,7 +293,7 @@ def DeleteRecord(record_id):
         Put(context, record_id_list_key, records_serialized)
 
         record_key = concat(RECORD_ID_PREFIX, record_id)
-        Put(context, record_key, '')
+        Delete(context, record_key)
         return True
     else:
         Log("Record doesn't exist")
@@ -318,17 +330,21 @@ def InsertOrder(usr_adr, record_id_list_str, price):
         Log("Empty record_id_list")
         return False
 
-    record_incorrect = False
-    for record_id in record_id_list:
-        record = GetRecord(record_id)
-        if (not record) or (record[0] != usr_adr):
-            record_incorrect = True
-    if record_incorrect:
-        Log("Incorrect record_id_list")
+    # record_incorrect = False
+    # for record_id in record_id_list:
+    #     record = GetRecord(record_id)
+    #     if (not record) or (record[0] != usr_adr):
+    #         record_incorrect = True
+    # if record_incorrect:
+    #     Log("Incorrect record_id_list")
+    #     return False
+
+    if price <= 0:
+        Log("Price should be positive")
         return False
 
     context = GetContext()
-    order_data = [usr_adr, record_id_list_str, price, 0]
+    order_data = [usr_adr, record_id_list_str, price, '']
     order_data_serialized = serialize_array(order_data)
     order_id = next_id(NEXT_ORDER_ID_KEY)
     order_key = concat(ORDER_ID_PREFIX, order_id)
@@ -337,8 +353,7 @@ def InsertOrder(usr_adr, record_id_list_str, price):
     orders_id = GetOrderIdList()
     orders_id.append(order_id)
     orders_serialized = serialize_array(orders_id)
-    order_id_list_key = concat(ORDER_ID_LIST_PREFIX, usr_adr)
-    Put(context, order_id_list_key, orders_serialized)
+    Put(context, ORDER_ID_LIST_PREFIX, orders_serialized)
 
     msg = concat("New order: ", order_id)
     Notify(msg)
@@ -379,16 +394,70 @@ def DeleteOrder(order_id):
     if found:
 
         orders_serialized = serialize_array(orders_id)
-        order_id_list_key = concat(ORDER_ID_LIST_PREFIX, usr_adr)
         context = GetContext()
-        Put(context, order_id_list_key, orders_serialized)
+        Put(context, ORDER_ID_LIST_PREFIX, orders_serialized)
 
         order_key = concat(ORDER_ID_PREFIX, order_id)
-        Put(context, order_key, '')
+        Delete(context, order_key)
         return True
     else:
         Log("Order doesn't exist")
         return False
+
+
+def PurchaseData(order_id, pub_key):
+    order = GetOrder(order_id)
+
+    if not order:
+        Log("Order doesn't exist")
+        return False
+
+    if order[3] != '':
+        Log("Already purchased")
+        return False
+
+    if pub_key == '':
+        Log("Empty public key")
+        return False
+
+    tx = GetScriptContainer()
+    references = tx.References
+    if len(references) < 1:
+        Log("No NEO attached")
+        return False
+
+    reference = references[0]
+    output_asset_id = GetAssetId(reference)
+    if output_asset_id != NEO_ASSET_ID:
+        Log("No NEO attached")
+        return False
+
+    received_NEO = 0
+    for output in tx.Outputs:
+        value = GetValue(output)
+        received_NEO += value
+
+    Log("Received total NEO:")
+    Log(received_NEO)
+    price = order[2]
+    #price = raw_price + raw_price * COMMISSION / 100
+    if received_NEO < price:
+        Log("Not enough NEO. Required:")
+        Log(price)
+        return False
+
+    Log("Rewriting order to new public key")
+    context = GetContext()
+    order[3] = pub_key
+    order_data_serialized = serialize_array(order)
+    order_key = concat(ORDER_ID_PREFIX, order_id)
+    Put(context, order_key, order_data_serialized)
+
+    Log("Payment to user")
+    sender = GetScriptHash(reference)
+    usr_adr = order[0]
+    DispatchTransferEvent(sender, usr_adr, price)
+    return True
 
 
 # <<< AUXILIARY METHODS >>>
@@ -414,7 +483,7 @@ def check_permission(usr_adr):
 # <<< UTILS >>>
 def str_to_list(record_id_list_raw):
     # TODO implement: "1:2:3" -> [1,2,3]
-    return []
+    return record_id_list_raw
 
 
 def deserialize_bytearray(data):
