@@ -40,11 +40,18 @@ from identity.sc_invoke_flow import IdentitySmartContract
 
 # Set constants from env vars or use default
 API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
-CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "d63a0b437a16579288361ccb593570e5c5f71149")
 
-PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
-WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
-WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
+# COZ TEST CONFIG
+# PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
+# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
+# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
+# CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "d63a0b437a16579288361ccb593570e5c5f71149")
+
+# PRIVNET CONFIG
+PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
+WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
+WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
+CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "4b66c5ce094fc17ec2b951de6109e192ecacb988")
 
 print(PROTOCOL_CONFIG, API_PORT, CONTRACT_HASH, WALLET_FILE, WALLET_PWD)
 
@@ -139,19 +146,8 @@ def pg_root(request):
 @catch_exceptions
 @json_response
 def find_transaction(request, tx_hash):
-    logger.info("/identity/tx/<tx_hash>")
     found = smart_contract.find_tx(tx_hash)
     return {"result": found}
-
-
-@app.route('/identity/records/<record_id>', methods=['GET'])
-@authenticated
-@catch_exceptions
-@json_response
-def get_record_by_id(request, record_id):
-    logger.info("/identity/records/<record_id>")
-    result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/users/', methods=['GET'])
@@ -159,9 +155,8 @@ def get_record_by_id(request, record_id):
 @catch_exceptions
 @json_response
 def get_users(request):
-    logger.info("/identity/users/")
     result, tx_unconfirmed = smart_contract.test_invoke("getUserList")
-    return {"result": result, "tx_unconfirmed": tx_unconfirmed}
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/users/<user_adr>/records/', methods=['GET'])
@@ -169,7 +164,6 @@ def get_users(request):
 @catch_exceptions
 @json_response
 def get_records_by_user_id(request, user_adr):
-    logger.info("/identity/users/<user_id>/records/")
     result, tx_unconfirmed = smart_contract.test_invoke("getRecordIdList", user_adr)
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
 
@@ -178,17 +172,58 @@ def get_records_by_user_id(request, user_adr):
 @authenticated
 @catch_exceptions
 @json_response
-def inser_record(request, user_adr, record_id):
-    logger.info("/identity/users/<user_id>/records/<record_id>")
+def insert_record(request, user_adr, record_id):
     return "Not implemented yet"
 
 
-@app.route('/identity/users/<user_adr>/records/<record_id>', methods=['DELETE'])
+@app.route('/identity/records/<record_id>', methods=['GET'])
 @authenticated
 @catch_exceptions
 @json_response
-def remove_record(request, user_adr, record_id):
-    logger.info("/identity/users/<user_id>/records/<record_id>")
+def get_record_by_id(request, record_id):
+    result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+
+
+@app.route('/identity/records/<record_id>', methods=['DELETE'])
+@authenticated
+@catch_exceptions
+@json_response
+def remove_record_by_id(request, record_id):
+    return "Not implemented yet"
+
+
+@app.route('/identity/orders/', methods=['GET'])
+@authenticated
+@catch_exceptions
+@json_response
+def get_orders(request, user_adr):
+    result, tx_unconfirmed = smart_contract.test_invoke("getOrderIdList", user_adr)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+
+
+@app.route('/identity/orders/', methods=['POST'])
+@authenticated
+@catch_exceptions
+@json_response
+def insert_order(request, user_adr, record_id):
+    return "Not implemented yet"
+
+
+@app.route('/identity/orders/<order_id>', methods=['GET'])
+@authenticated
+@catch_exceptions
+@json_response
+def get_order_by_id(request, order_id):
+    result, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+
+
+@app.route('/identity/orders/<order_id>', methods=['DELETE'])
+@authenticated
+@catch_exceptions
+@json_response
+def remove_order_by_id(request, order_id):
     return "Not implemented yet"
 
 

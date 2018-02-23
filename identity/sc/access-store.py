@@ -24,18 +24,18 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getUserList []
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getRecord [1]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteRecord [1]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrderList []
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrderIdList []
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d getOrder [1]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d deleteOrder [1]
-neo> testinvoke b3bee941f4e5b0559384fe1528d314df9a52cd4d purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getUserList []
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getRecord [1]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 deleteRecord [1]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getOrderList []
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getOrderIdList []
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getOrder [1]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 deleteOrder [1]
+neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.blockchain.vm.Neo.Runtime import Log, Notify
@@ -44,11 +44,12 @@ from boa.blockchain.vm.Neo.Storage import GetContext, Get, Put, Delete
 from boa.blockchain.vm.Neo.Output import GetScriptHash, GetValue, GetAssetId
 from boa.blockchain.vm.Neo.Action import RegisterAction
 from boa.blockchain.vm.Neo.Transaction import Transaction, GetReferences, GetOutputs,GetUnspentCoins
-from boa.blockchain.vm.System.ExecutionEngine import GetScriptContainer
+from boa.blockchain.vm.System.ExecutionEngine import GetScriptContainer, GetExecutingScriptHash
 from boa.code.builtins import concat, list, range, substr
 
 # Script hash of the contract owner
-OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'
+#OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
+OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
 
 # Constants
 NEO_ASSET_ID = b'\x9b|\xff\xda\xa6t\xbe\xae\x0f\x93\x0e\xbe`\x85\xaf\x90\x93\xe5\xfeV\xb3J\\"\x0c\xcd\xcfn\xfc3o\xc5'
@@ -69,7 +70,6 @@ WRONG_ARGS = 'wrong arguments'
 
 # Const values
 INITIAL_ID = 1
-COMMISSION = 10
 
 # Events
 DispatchTransferEvent = RegisterAction('transfer', 'from', 'to', 'amount')
@@ -426,24 +426,17 @@ def PurchaseData(order_id, pub_key):
         Log("No NEO attached")
         return False
 
-    reference = references[0]
-    output_asset_id = GetAssetId(reference)
-    if output_asset_id != NEO_ASSET_ID:
-        Log("No NEO attached")
-        return False
-
+    receiver_addr = GetExecutingScriptHash()
     received_NEO = 0
     for output in tx.Outputs:
-        value = GetValue(output)
-        received_NEO += value
+        if output.ScriptHash == receiver_addr and output.AssetId == NEO_ASSET_ID:
+            received_NEO += output.Value
 
     Log("Received total NEO:")
     Log(received_NEO)
     price = order[2]
-    #price = raw_price + raw_price * COMMISSION / 100
     if received_NEO < price:
-        Log("Not enough NEO. Required:")
-        Log(price)
+        Log("Not enough NEO")
         return False
 
     Log("Rewriting order to new public key")
@@ -454,6 +447,7 @@ def PurchaseData(order_id, pub_key):
     Put(context, order_key, order_data_serialized)
 
     Log("Payment to user")
+    reference = references[0]
     sender = GetScriptHash(reference)
     usr_adr = order[0]
     DispatchTransferEvent(sender, usr_adr, price)
