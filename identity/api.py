@@ -141,6 +141,17 @@ def pg_root(request):
     return 'I am the root page!'
 
 
+@app.route('/identity/claim_gas/<usr_adr>', methods=['GET'])
+@authenticated
+@catch_exceptions
+@json_response
+def claim_gas(request, usr_adr):
+    if IS_DEV:
+        tx_hash = smart_contract.claim_gas(usr_adr)
+        return {"result": tx_hash}
+    return 'Not supported'
+
+
 @app.route('/identity/tx/<tx_hash>', methods=['GET'])
 @authenticated
 @catch_exceptions

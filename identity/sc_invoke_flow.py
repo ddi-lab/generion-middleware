@@ -6,6 +6,7 @@ from twisted.internet import task
 
 from neo.Implementations.Wallets.peewee.UserWallet import UserWallet
 from neo.Prompt.Commands.Invoke import InvokeContract, TestInvokeContract, test_invoke
+from neo.Prompt.Commands.Send import construct_and_send
 from neo.Settings import settings
 from neo.Core.Blockchain import Blockchain
 from neo.contrib.smartcontract import SmartContract
@@ -61,15 +62,29 @@ class IdentitySmartContract():
                 address_from = self.bytes_to_address(event.event_payload[1])
                 address_to = self.bytes_to_address(event.event_payload[2])
                 amount = int.from_bytes(event.event_payload[3], byteorder='big')
-                self.transfer(address_from, address_to, amount)
+                self.transfer("neo", address_from, address_to, amount)
 
     def bytes_to_address(self, bytes):
         script_hash = UInt160(data=bytes)
         address = Crypto.ToAddress(script_hash)
         return address
 
-    def transfer(self, address_from, address_to, amount):
-        logger.info("Transfer %s NEO from %s to %s", amount, address_from, address_to)
+    def transfer(self, asset, address_from, address_to, amount):
+        logger.info("Transfer %s %s from %s to %s", amount, asset, address_from, address_to)
+        try:
+            self.open_wallet()
+            tx = construct_and_send(None, self.wallet, [asset, address_to, str(amount)], False)
+            if tx:
+                sent_tx_hash = tx.Hash.ToString()
+                logger.info("Transfer success, transaction underway: %s" % sent_tx_hash)
+                self.tx_unconfirmed.add(sent_tx_hash)
+                return sent_tx_hash
+            return False
+        finally:
+            self.close_wallet()
+
+    def claim_gas(self, usr_adr):
+        return self.transfer("gas", "API", usr_adr, 100)
 
     def test_invoke(self, method_name, *args):
         result = self._invoke_method(False, method_name, *args)
