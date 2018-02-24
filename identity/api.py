@@ -189,8 +189,30 @@ def get_records_by_user_id(request, user_adr):
 @authenticated
 @catch_exceptions
 @json_response
-def insert_record(request, user_adr, record_id):
-    return "Not implemented yet"
+def insert_record(request, user_adr):
+    try:
+        body = json.loads(request.content.read().decode("utf-8"))
+    except JSONDecodeError as e:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "JSON Error: %s" % str(e))
+
+    if len(user_adr) != 34:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Address not 34 characters")
+
+    if "data_pub_key" not in body:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Missing data_pub_key")
+
+    if "data_encr" not in body:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Missing data_encr")
+
+    data_pub_key = body["data_pub_key"]
+    data_encr = body["data_encr"]
+
+    result, tx_unconfirmed, tx_hash, tx_gas_cost = smart_contract.invoke("createRecord", user_adr, data_pub_key, data_encr)
+    return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash, "tx_gas_cost": tx_gas_cost}
 
 
 @app.route('/identity/records/<record_id>', methods=['GET'])

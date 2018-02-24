@@ -13,6 +13,7 @@ from neo.contrib.smartcontract import SmartContract
 from neo.VM.InteropService import stack_item_to_py
 from neocore.UInt160 import UInt160
 from neocore.Cryptography.Crypto import Crypto
+from neocore.Fixed8 import Fixed8
 
 
 # Setup the blockchain task queue
@@ -91,8 +92,8 @@ class IdentitySmartContract():
         return result, list(self.tx_unconfirmed)
 
     def invoke(self, method_name, *args):
-        result, tx = self._invoke_method(True, method_name, *args)
-        return result, list(self.tx_unconfirmed), tx
+        result, tx_hash, tx_gas_cost = self._invoke_method(True, method_name, *args)
+        return result, list(self.tx_unconfirmed), tx_hash, tx_gas_cost
 
     def open_wallet(self):
         """ Open a wallet. Needed for invoking contract methods. """
@@ -148,18 +149,24 @@ class IdentitySmartContract():
         time.sleep(3)
 
         # Wait until wallet is synced:
-        while True:
-            # TODO rebuild wallet ???
+        percent_synced = 0
+        wallet_synced = False
+        for i in range(0, 5):
             percent_synced = int(100 * self.wallet._current_height / Blockchain.Default().Height)
             if percent_synced > 99:
+                wallet_synced = True
                 break
             logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (self.wallet._current_height, percent_synced))
             time.sleep(5)
+        if not wallet_synced:
+            self.close_wallet()
+            raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
 
         _args = [self.contract_hash, method_name, str(list(args))]
 
         logger.info("TestInvokeContract args: %s" % _args)
         tx, fee, results, num_ops = TestInvokeContract(self.wallet, _args)
+        tx_gas_cost = tx.Gas.value / Fixed8.D
         logger.info("TestInvokeContract fee: %s" % fee)
         logger.info("TestInvokeContract results: %s" % [str(item) for item in results])
         logger.info("TestInvokeContract RESULT: %s ", stack_item_to_py(results[0]))
@@ -177,6 +184,7 @@ class IdentitySmartContract():
 
         if not self.wallet_has_gas():
             logger.error("Oh no, wallet has no gas!")
+            logger.info(self.wallet.GetSyncedBalances())
             self.close_wallet()
             raise Exception("Wallet has no gas.")
 
@@ -187,7 +195,7 @@ class IdentitySmartContract():
             logger.info("InvokeContract success, transaction underway: %s" % sent_tx_hash)
             self.tx_unconfirmed.add(sent_tx_hash)
             self.close_wallet()
-            return result, sent_tx_hash
+            return result, sent_tx_hash, tx_gas_cost
 
         else:
             self.close_wallet()
