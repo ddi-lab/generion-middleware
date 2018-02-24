@@ -167,7 +167,10 @@ def find_transaction(request, tx_hash):
 @json_response
 def get_users(request):
     result, tx_unconfirmed = smart_contract.test_invoke("getUserList")
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+    usr_adr_list = []
+    for id_bytes in result:
+        usr_adr_list.append(smart_contract.bytes_to_address(id_bytes))
+    return {"result": usr_adr_list, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/users/<user_adr>/records/', methods=['GET'])
@@ -176,7 +179,10 @@ def get_users(request):
 @json_response
 def get_records_by_user_id(request, user_adr):
     result, tx_unconfirmed = smart_contract.test_invoke("getRecordIdList", user_adr)
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+    id_list = []
+    for id in result:
+        id_list.append(int.from_bytes(id, byteorder='big'))
+    return {"result": id_list, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/users/<user_adr>/records/', methods=['POST'])
@@ -193,7 +199,10 @@ def insert_record(request, user_adr, record_id):
 @json_response
 def get_record_by_id(request, record_id):
     result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+    result[0] = smart_contract.bytes_to_address(result[0])
+    result[1] = str(result[1])
+    result[2] = str(result[2])
+    return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/records/<record_id>', methods=['DELETE'])
@@ -208,16 +217,19 @@ def remove_record_by_id(request, record_id):
 @authenticated
 @catch_exceptions
 @json_response
-def get_orders(request, user_adr):
-    result, tx_unconfirmed = smart_contract.test_invoke("getOrderIdList", user_adr)
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+def get_orders(request):
+    result, tx_unconfirmed = smart_contract.test_invoke("getOrderIdList")
+    id_list = []
+    for id in result:
+        id_list.append(int.from_bytes(id, byteorder='big'))
+    return {"result": id_list, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/orders/', methods=['POST'])
 @authenticated
 @catch_exceptions
 @json_response
-def insert_order(request, user_adr, record_id):
+def insert_order(request):
     return "Not implemented yet"
 
 
@@ -227,7 +239,11 @@ def insert_order(request, user_adr, record_id):
 @json_response
 def get_order_by_id(request, order_id):
     result, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
-    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed}
+    result[0] = smart_contract.bytes_to_address(result[0])
+    result[1] = str(result[1])
+    result[2] = int.from_bytes(result[2], byteorder='big')
+    result[3] = str(result[3])
+    return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/orders/<order_id>', methods=['DELETE'])
