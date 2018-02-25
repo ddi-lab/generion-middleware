@@ -58,7 +58,7 @@ There is a possibility to sell data. To do this person can leave a request conta
 
 ### 7.	Future
 
-Our vision for this project is to become self-sustaining global network to gain flawless transparency and independency. 
+Our vision for this project is to become self-sustaining global network to achieve flawless transparency and independency.  
 
 ### 8.	Instructions
 
