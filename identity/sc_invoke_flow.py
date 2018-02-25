@@ -60,7 +60,7 @@ class IdentitySmartContract():
             if event.event_payload[0].decode("utf-8") == "transfer":
                 address_from = bytes_to_address(event.event_payload[1])
                 address_to = bytes_to_address(event.event_payload[2])
-                amount = int.from_bytes(event.event_payload[3], byteorder='big')
+                amount = int.from_bytes(event.event_payload[3], byteorder='little')
                 self.transfer("neo", address_from, address_to, amount)
 
     def transfer(self, asset, address_from, address_to, amount):
@@ -107,6 +107,12 @@ class IdentitySmartContract():
             self._walletdb_loop = None
             self.wallet = None
             self.wallet_mutex.release()
+
+    def reopen_wallet(self):
+        self._walletdb_loop.stop()
+        self.wallet = UserWallet.Open(self.wallet_path, self.wallet_pass)
+        self._walletdb_loop = task.LoopingCall(self.wallet.ProcessBlocks)
+        self._walletdb_loop.start(1)
 
     def wallet_has_gas(self):
         # Make sure no tx is in progress and we have GAS
@@ -165,6 +171,7 @@ class IdentitySmartContract():
                     break
                 logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (self.wallet._current_height, percent_synced))
                 time.sleep(5)
+                self.reopen_wallet()
             if not wallet_synced:
                 raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
 

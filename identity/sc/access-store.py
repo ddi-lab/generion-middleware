@@ -430,6 +430,7 @@ def PurchaseData(order_id, pub_key):
     for output in tx.Outputs:
         if output.ScriptHash == receiver_addr and output.AssetId == NEO_ASSET_ID:
             received_NEO += output.Value
+    received_NEO /= 100000000
 
     Log("Received total NEO:")
     Log(received_NEO)

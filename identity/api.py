@@ -183,7 +183,7 @@ def get_records_by_user_id(request, user_adr):
     result, tx_unconfirmed = smart_contract.test_invoke("getRecordIdList", user_adr)
     id_list = []
     for id in result:
-        id_list.append(int.from_bytes(id, byteorder='big'))
+        id_list.append(int.from_bytes(id, byteorder='little'))
     return {"result": id_list, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -249,7 +249,7 @@ def get_orders(request):
     result, tx_unconfirmed = smart_contract.test_invoke("getOrderIdList")
     id_list = []
     for id in result:
-        id_list.append(int.from_bytes(id, byteorder='big'))
+        id_list.append(int.from_bytes(id, byteorder='little'))
     return {"result": id_list, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -310,7 +310,7 @@ def get_order_by_id(request, order_id):
     if len(result) == 4:
         result[0] = bytes_to_address(result[0])
         result[1] = parse_record_id_list(str(result[1]))
-        result[2] = int.from_bytes(result[2], byteorder='big')
+        result[2] = int.from_bytes(result[2], byteorder='little')
         result[3] = bytestr_to_str(result[3])
     else:
         result = []
@@ -355,7 +355,7 @@ def purchase_order_by_id(request, order_id):
     if len(order) == 4:
         order[0] = bytes_to_address(order[0])
         order[1] = parse_record_id_list(str(order[1]))
-        order[2] = int.from_bytes(order[2], byteorder='big')
+        order[2] = int.from_bytes(order[2], byteorder='little')
         order[3] = bytestr_to_str(order[3])
     else:
         request.setResponseCode(400)
