@@ -15,13 +15,13 @@ from neo.VM.InteropService import stack_item_to_py
 from identity.utils import bytes_to_address
 
 
-# Setup the blockchain task queue
+# Setup the blockchain processor
 class IdentitySmartContract():
     """
-    Invoke queue is necessary for handling many concurrent sc invokes.
+    wallet_mutex is necessary for handling many concurrent sc invokes.
 
-    Eg. many api calls want to initiate a smart contract methods, they add them
-    to this queue, and they get processed as they can (eg. if gas is available)
+    Eg. many api calls want to initiate a smart contract methods, they are locked
+    until the last one finished, and they get processed as they can (eg. if gas is available)
     """
     smart_contract = None
     contract_hash = None
@@ -56,12 +56,12 @@ class IdentitySmartContract():
         @self.smart_contract.on_notify
         def sc_notify(event):
             """ This method catches Runtime.Notify calls """
-            # logger.info("sc_notify event: %s", str(event))
-            # if event.event_payload[0].decode("utf-8") == "transfer":
-            #     address_from = bytes_to_address(event.event_payload[1])
-            #     address_to = bytes_to_address(event.event_payload[2])
-            #     amount = int.from_bytes(event.event_payload[3], byteorder='big')
-            #     self.transfer("neo", address_from, address_to, amount)
+            logger.info("sc_notify event: %s", str(event))
+            if event.event_payload[0].decode("utf-8") == "transfer":
+                address_from = bytes_to_address(event.event_payload[1])
+                address_to = bytes_to_address(event.event_payload[2])
+                amount = int.from_bytes(event.event_payload[3], byteorder='big')
+                self.transfer("neo", address_from, address_to, amount)
 
     def transfer(self, asset, address_from, address_to, amount):
         logger.info("Transfer %s %s from %s to %s", amount, asset, address_from, address_to)

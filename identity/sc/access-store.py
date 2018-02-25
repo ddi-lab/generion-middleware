@@ -24,18 +24,18 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getUserList []
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getRecord [1]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 deleteRecord [1]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getOrderList []
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getOrderIdList []
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 getOrder [1]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 deleteOrder [1]
-neo> testinvoke 4b66c5ce094fc17ec2b951de6109e192ecacb988 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getUserList []
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getRecord [1]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 deleteRecord [1]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getOrderList []
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getOrderIdList []
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getOrder [1]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 deleteOrder [1]
+neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.blockchain.vm.Neo.Runtime import Log, Notify
@@ -235,7 +235,7 @@ def InsertRecord(usr_adr, data_pub_key, data_encr):
         context = GetContext()
         Put(context, USR_ADR_LIST, users_serialized)
         msg = concat("New user: ", usr_adr)
-        Notify(msg)
+        Log(msg)
 
     context = GetContext()
     record_data = [usr_adr, data_pub_key, data_encr]
@@ -325,8 +325,7 @@ def InsertOrder(usr_adr, record_id_list_str, price):
         Log("Must be owner to create an order")
         return False
 
-    record_id_list = str_to_list(record_id_list_str)
-    if len(record_id_list) <= 0:
+    if len(record_id_list_str) <= 0:
         Log("Empty record_id_list")
         return False
 
@@ -475,9 +474,9 @@ def check_permission(usr_adr):
 
 
 # <<< UTILS >>>
-def str_to_list(record_id_list_raw):
-    # TODO implement: "1:2:3" -> [1,2,3]
-    return record_id_list_raw
+# def str_to_list(record_id_list_raw):
+#     # TODO implement: "1:2:3" -> [1,2,3]
+#     return record_id_list_raw
 
 
 def deserialize_bytearray(data):

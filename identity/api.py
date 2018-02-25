@@ -50,7 +50,7 @@ API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
 PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
 WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
 WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
-CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "4b66c5ce094fc17ec2b951de6109e192ecacb988")
+CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "33127f8cbc573cea03ef35e9d1586e6aa208fc74")
 
 print(PROTOCOL_CONFIG, API_PORT, CONTRACT_HASH, WALLET_FILE, WALLET_PWD)
 
@@ -223,9 +223,12 @@ def insert_record(request, user_adr):
 @json_response
 def get_record_by_id(request, record_id):
     result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
-    result[0] = bytes_to_address(result[0])
-    result[1] = bytestr_to_str(result[1])
-    result[2] = bytestr_to_str(result[2])
+    if len(result) == 3:
+        result[0] = bytes_to_address(result[0])
+        result[1] = bytestr_to_str(result[1])
+        result[2] = bytestr_to_str(result[2])
+    else:
+        result = []
     return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -234,7 +237,8 @@ def get_record_by_id(request, record_id):
 @catch_exceptions
 @json_response
 def remove_record_by_id(request, record_id):
-    return "Not implemented yet"
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke("deleteRecord", record_id)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
 @app.route('/identity/orders/', methods=['GET'])
@@ -288,12 +292,12 @@ def insert_order(request, user_adr):
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "Missing price")
 
-    price = body["price"]
+    price = int(body["price"])
+    if price < 0:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Price can not be negative")
 
-
-    print((user_adr, record_id_list_str, price))
-    result, tx_unconfirmed, tx_hash = None, None, None
-    #result, tx_unconfirmed, tx_hash= smart_contract.invoke("createRecord", user_adr, data_pub_key, data_encr)
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke("createOrder", user_adr, record_id_list_str, price)
     return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
@@ -303,10 +307,13 @@ def insert_order(request, user_adr):
 @json_response
 def get_order_by_id(request, order_id):
     result, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
-    result[0] = bytes_to_address(result[0])
-    result[1] = parse_record_id_list(str(result[1]))
-    result[2] = int.from_bytes(result[2], byteorder='big')
-    result[3] = bytestr_to_str(result[3])
+    if len(result) == 4:
+        result[0] = bytes_to_address(result[0])
+        result[1] = parse_record_id_list(str(result[1]))
+        result[2] = int.from_bytes(result[2], byteorder='big')
+        result[3] = bytestr_to_str(result[3])
+    else:
+        result = []
     return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -315,7 +322,8 @@ def get_order_by_id(request, order_id):
 @catch_exceptions
 @json_response
 def remove_order_by_id(request, order_id):
-    return "Not implemented yet"
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke("deleteOrder", order_id)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
 if __name__ == "__main__":
