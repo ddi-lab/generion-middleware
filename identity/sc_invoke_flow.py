@@ -35,7 +35,6 @@ class IdentitySmartContract():
     wallet = None
     _walletdb_loop = None
 
-
     def __init__(self, contract_hash, wallet_path, wallet_pass):
 
         self.contract_hash = contract_hash
@@ -57,13 +56,12 @@ class IdentitySmartContract():
         @self.smart_contract.on_notify
         def sc_notify(event):
             """ This method catches Runtime.Notify calls """
-            logger.info("sc_notify event: %s", str(event))
-            if event.event_payload[0].decode("utf-8") == "transfer":
-                address_from = bytes_to_address(event.event_payload[1])
-                address_to = bytes_to_address(event.event_payload[2])
-                amount = int.from_bytes(event.event_payload[3], byteorder='big')
-                self.transfer("neo", address_from, address_to, amount)
-
+            # logger.info("sc_notify event: %s", str(event))
+            # if event.event_payload[0].decode("utf-8") == "transfer":
+            #     address_from = bytes_to_address(event.event_payload[1])
+            #     address_to = bytes_to_address(event.event_payload[2])
+            #     amount = int.from_bytes(event.event_payload[3], byteorder='big')
+            #     self.transfer("neo", address_from, address_to, amount)
 
     def transfer(self, asset, address_from, address_to, amount):
         logger.info("Transfer %s %s from %s to %s", amount, asset, address_from, address_to)
@@ -83,12 +81,20 @@ class IdentitySmartContract():
         return self.transfer("gas", "API", usr_adr, 100)
 
     def test_invoke(self, method_name, *args):
-        result = self._invoke_method(False, method_name, *args)
-        return result, list(self.tx_unconfirmed)
+        try:
+            result = self._invoke_method(False, method_name, *args)
+            return result, list(self.tx_unconfirmed)
+        except:
+            self.close_wallet()
+            raise
 
     def invoke(self, method_name, *args):
-        result, tx_hash, tx_gas_cost = self._invoke_method(True, method_name, *args)
-        return result, list(self.tx_unconfirmed), tx_hash
+        try:
+            result, tx_hash = self._invoke_method(True, method_name, *args)
+            return result, list(self.tx_unconfirmed), tx_hash
+        except:
+            self.close_wallet()
+            raise
 
     def open_wallet(self):
         """ Open a wallet. Needed for invoking contract methods. """
@@ -99,10 +105,11 @@ class IdentitySmartContract():
         self._walletdb_loop.start(1)
 
     def close_wallet(self):
-        self._walletdb_loop.stop()
-        self._walletdb_loop = None
-        self.wallet = None
-        self.wallet_mutex.release()
+        if self.wallet is not None:
+            self._walletdb_loop.stop()
+            self._walletdb_loop = None
+            self.wallet = None
+            self.wallet_mutex.release()
 
     def wallet_has_gas(self):
         # Make sure no tx is in progress and we have GAS
@@ -154,21 +161,20 @@ class IdentitySmartContract():
             logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (self.wallet._current_height, percent_synced))
             time.sleep(5)
         if not wallet_synced:
-            self.close_wallet()
             raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
 
         _args = [self.contract_hash, method_name, str(list(args))]
 
         logger.info("TestInvokeContract args: %s" % _args)
         tx, fee, results, num_ops = TestInvokeContract(self.wallet, _args)
+        if not tx:
+            raise Exception("TestInvokeContract failed")
+
         logger.info("TestInvokeContract fee: %s" % fee)
         logger.info("TestInvokeContract results: %s" % [str(item) for item in results])
         logger.info("TestInvokeContract RESULT: %s ", stack_item_to_py(results[0]))
         logger.info("TestInvokeContract num_ops: %s" % num_ops)
         result = stack_item_to_py(results[0])
-        if not tx:
-            self.close_wallet()
-            raise Exception("TestInvokeContract failed")
 
         if not send_tx_needed:
             self.close_wallet()
@@ -179,7 +185,6 @@ class IdentitySmartContract():
         if not self.wallet_has_gas():
             logger.error("Oh no, wallet has no gas!")
             logger.info(self.wallet.GetSyncedBalances())
-            self.close_wallet()
             raise Exception("Wallet has no gas.")
 
         sent_tx = InvokeContract(self.wallet, tx, fee)
@@ -192,5 +197,4 @@ class IdentitySmartContract():
             return result, sent_tx_hash
 
         else:
-            self.close_wallet()
             raise Exception("InvokeContract failed")

@@ -249,12 +249,52 @@ def get_orders(request):
     return {"result": id_list, "tx_unconfirmed": tx_unconfirmed}
 
 
-@app.route('/identity/orders/', methods=['POST'])
+@app.route('/identity/users/<user_adr>/orders/', methods=['POST'])
 @authenticated
 @catch_exceptions
 @json_response
-def insert_order(request):
-    return "Not implemented yet"
+def insert_order(request, user_adr):
+    try:
+        body = json.loads(request.content.read().decode("utf-8"))
+    except JSONDecodeError as e:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "JSON Error: %s" % str(e))
+
+    if len(user_adr) != 34:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Address not 34 characters")
+
+    if "record_id_list" not in body:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Missing record_id_list")
+    record_id_list = body["record_id_list"]
+
+    if isinstance(record_id_list, str):
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Should be a list record_id_list")
+
+    record_id_list_str = ""
+    for record_id in record_id_list:
+        record_id_list_str += str(int(record_id))
+        record_id_list_str += ":"
+
+    if len(record_id_list_str) == 0:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Empty list record_id_list")
+    else:
+        record_id_list_str = record_id_list_str[0:len(record_id_list_str)-1]
+
+    if "price" not in body:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Missing price")
+
+    price = body["price"]
+
+
+    print((user_adr, record_id_list_str, price))
+    result, tx_unconfirmed, tx_hash = None, None, None
+    #result, tx_unconfirmed, tx_hash= smart_contract.invoke("createRecord", user_adr, data_pub_key, data_encr)
+    return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
 @app.route('/identity/orders/<order_id>', methods=['GET'])
