@@ -93,7 +93,7 @@ class IdentitySmartContract():
 
     def invoke(self, method_name, *args):
         result, tx_hash, tx_gas_cost = self._invoke_method(True, method_name, *args)
-        return result, list(self.tx_unconfirmed), tx_hash, tx_gas_cost
+        return result, list(self.tx_unconfirmed), tx_hash
 
     def open_wallet(self):
         """ Open a wallet. Needed for invoking contract methods. """
@@ -166,7 +166,6 @@ class IdentitySmartContract():
 
         logger.info("TestInvokeContract args: %s" % _args)
         tx, fee, results, num_ops = TestInvokeContract(self.wallet, _args)
-        tx_gas_cost = tx.Gas.value / Fixed8.D
         logger.info("TestInvokeContract fee: %s" % fee)
         logger.info("TestInvokeContract results: %s" % [str(item) for item in results])
         logger.info("TestInvokeContract RESULT: %s ", stack_item_to_py(results[0]))
@@ -195,7 +194,7 @@ class IdentitySmartContract():
             logger.info("InvokeContract success, transaction underway: %s" % sent_tx_hash)
             self.tx_unconfirmed.add(sent_tx_hash)
             self.close_wallet()
-            return result, sent_tx_hash, tx_gas_cost
+            return result, sent_tx_hash
 
         else:
             self.close_wallet()

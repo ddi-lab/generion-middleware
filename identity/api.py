@@ -92,6 +92,9 @@ def authenticated(func):
     """ @authenticated decorator, which makes sure the HTTP request has the correct access token """
     @wraps(func)
     def wrapper(request, *args, **kwargs):
+        if IS_DEV:
+            return func(request, *args, **kwargs)
+
         # Make sure Authorization header is present
         if not request.requestHeaders.hasHeader("Authorization"):
             request.setHeader('Content-Type', 'application/json')
@@ -211,8 +214,8 @@ def insert_record(request, user_adr):
     data_pub_key = body["data_pub_key"]
     data_encr = body["data_encr"]
 
-    result, tx_unconfirmed, tx_hash, tx_gas_cost = smart_contract.invoke("createRecord", user_adr, data_pub_key, data_encr)
-    return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash, "tx_gas_cost": tx_gas_cost}
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke("createRecord", user_adr, data_pub_key, data_encr)
+    return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
 @app.route('/identity/records/<record_id>', methods=['GET'])
@@ -274,6 +277,13 @@ def get_order_by_id(request, order_id):
 @json_response
 def remove_order_by_id(request, order_id):
     return "Not implemented yet"
+
+
+# def parse_record_id_list(record_id_list_str):
+#     arr = record_id_list_str[2:len(record_id_list_str)-1].split(':')
+#     res = []
+#     for item in arr:
+#         if
 
 
 if __name__ == "__main__":
