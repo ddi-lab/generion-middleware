@@ -8,7 +8,7 @@
 
 ### 1.	What is Generion?
 
-Generion is blockchain-based, decentralized infrastructure for safe and anonymous storing, using and sharing personal data. The current MVP is aimed to healthcare domain. However, the architecture can be used in any sphere that accumulates user’s personal information.
+Generion is blockchain-based, decentralized infrastructure for safe and anonymous storing, using and sharing personal data. The current MVP is aimed to healthcare domain. However, the architecture can be used in any sphere that accumulates and operates user’s personal information.
 
 ### 2.	Current problems
 
@@ -19,8 +19,11 @@ Another big issue in the field is security. During the last few years we have se
 
 ### 3.	Solution
 
-By using blockchain we can facilitate a secure way to medical records sharing, sensitive data protection, and giving patients control over their personal information with just using the mobile app. Patients will be able to share their data to any healthcare organization they trust without asking their local clinic to send the data by mail. 
-This ensures no one can rewrite the patient’s health record after one was created. The unique pair of keys carried by all users, data and transactions in a blockchain will facilitate the aggregation process, that can automatically compile verified statistics, so medical institutions will not have to spend so many time and paper to fill in countless reports. 
+By using blockchain we can facilitate a secure way to medical records storing, sensitive data protection, and giving patients control over their personal information with just using the mobile app. Patients will be able to share their data to any healthcare organization they trust without asking their local clinic to send the data by mail. 
+This ensures no one can rewrite the patient’s health record after one was created. 
+The unique pair of keys carried by all users, data and transactions in a blockchain will facilitate the aggregation process, that can automatically compile verified statistics, so medical institutions will not have to spend so many time and paper to fill in countless reports. 
+The mobile app is the first step in facilitating patients’ ability to monetize their data by having direct offers from interested parties.
+Data sellers and buyers can execute smart contracts and transfer the specified data directly. Identity of the patient is never revealed to the data buyer without the patient’s agreement. As a result, buyers get accurate data from the direct source. 
 
 ### 4.	Technical
 
@@ -53,16 +56,11 @@ There is a possibility to sell data. To do this person can leave a request conta
 - `deleteOrder [order_id]` = Delete the specific order (access restricted)
 - `purchaseData [order_id, pub_key] –attach-neo={}` = Acquire the specific order and attach neo tokens
 
-### 7.	Monetizing personal info.
-
-The mobile app is the first step in facilitating patients’ ability to monetize their data by having direct offers from interested parties.
-Data sellers and buyers can execute smart contracts and transfer the specified data directly. Identity of the patient is never revealed to the data buyer without the patient’s agreement. As a result, buyers get accurate data from the direct source. 
-
-### 8.	Future
+### 7.	Future
 
 Our vision for this project is to become self-sustaining global network to gain flawless transparency and independency. 
 
-### 9.	Instructions
+### 8.	Instructions
 
 1. Install dependencies. Follow instructions from [neo-python](https://github.com/CityOfZion/neo-python)
 2. Open CLI
