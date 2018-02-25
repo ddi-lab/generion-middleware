@@ -1,4 +1,4 @@
-Copyright (c) 2017 Ethan Fast and CoZ
+Copyright (c) 2017 Data & Digital Identity Lab
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
