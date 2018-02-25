@@ -13,9 +13,9 @@ Generion is blockchain-based, decentralized infrastructure for safe and anonymou
 ### 2.	Current problems
 
 The majority of healthcare organizations have electronic databases with patient’s treatment history, but they are hardly ever synchronized with each other. Besides of the high level of bureaucracy in processing and storing medical data it can lead to far more serious problems.
-According to the National Center for Health Statistics, medical error is the third leading cause of death in the United States after heart attack and cancer[1](https://hub.jhu.edu/2016/05/03/medical-errors-third-leading-cause-of-death/).
+According to the National Center for Health Statistics, medical error is the third leading cause of death in the United States after heart attack and cancer [[1]](https://hub.jhu.edu/2016/05/03/medical-errors-third-leading-cause-of-death/).
 Thousands of lethal cases were caused by giving the patients wrong treatment after going from one hospital to another without learning patient's treatment history and allergic reactions. 
-Another big issue in the field is security. During the last few years we have seen numerous cyber attacks and breaches of medical databases[2](http://www.healthcareitnews.com/slideshow/biggest-healthcare-breaches-2017-so-far?page=1).
+Another big issue in the field is security. During the last few years we have seen numerous cyber attacks and breaches of medical databases [[2]](http://www.healthcareitnews.com/slideshow/biggest-healthcare-breaches-2017-so-far?page=1).
 
 ### 3.	Solution
 
@@ -24,9 +24,9 @@ This ensures no one can rewrite the patient’s health record after one was crea
 
 ### 4.	Technical
 
-- SmartContract. Written in python. Compiled with neo-boa 0.2.2
+- [SmartContract](https://github.com/ddi-lab/generion-middleware/blob/master/identity/sc/access-store.py). Written in python. Compiled with neo-boa 0.2.2
 
-- Middleware. Written in python. Based on neo-python of dev branch version 0.4.7
+- [Middleware](https://github.com/ddi-lab/generion-middleware/blob/master/identity/api.py). Written in python. Based on neo-python of dev branch version 0.4.7
 
 - [DataSource](https://github.com/ddi-lab/generion-datasource)
 
