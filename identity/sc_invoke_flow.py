@@ -11,9 +11,8 @@ from neo.Settings import settings
 from neo.Core.Blockchain import Blockchain
 from neo.contrib.smartcontract import SmartContract
 from neo.VM.InteropService import stack_item_to_py
-from neocore.UInt160 import UInt160
-from neocore.Cryptography.Crypto import Crypto
-from neocore.Fixed8 import Fixed8
+
+from identity.utils import bytes_to_address
 
 
 # Setup the blockchain task queue
@@ -60,15 +59,11 @@ class IdentitySmartContract():
             """ This method catches Runtime.Notify calls """
             logger.info("sc_notify event: %s", str(event))
             if event.event_payload[0].decode("utf-8") == "transfer":
-                address_from = self.bytes_to_address(event.event_payload[1])
-                address_to = self.bytes_to_address(event.event_payload[2])
+                address_from = bytes_to_address(event.event_payload[1])
+                address_to = bytes_to_address(event.event_payload[2])
                 amount = int.from_bytes(event.event_payload[3], byteorder='big')
                 self.transfer("neo", address_from, address_to, amount)
 
-    def bytes_to_address(self, bytes):
-        script_hash = UInt160(data=bytes)
-        address = Crypto.ToAddress(script_hash)
-        return address
 
     def transfer(self, asset, address_from, address_to, amount):
         logger.info("Transfer %s %s from %s to %s", amount, asset, address_from, address_to)

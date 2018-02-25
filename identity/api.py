@@ -24,7 +24,6 @@ from twisted.web.server import Request, Site
 from twisted.python import log
 from twisted.internet.protocol import Factory
 
-
 # Allow importing 'neo' from parent path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -36,7 +35,7 @@ from neo.Core.Blockchain import Blockchain
 from neo.Settings import settings
 
 from identity.sc_invoke_flow import IdentitySmartContract
-
+from identity.utils import bytestr_to_str, parse_record_id_list, bytes_to_address
 
 # Set constants from env vars or use default
 API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
@@ -172,7 +171,7 @@ def get_users(request):
     result, tx_unconfirmed = smart_contract.test_invoke("getUserList")
     usr_adr_list = []
     for id_bytes in result:
-        usr_adr_list.append(smart_contract.bytes_to_address(id_bytes))
+        usr_adr_list.append(bytes_to_address(id_bytes))
     return {"result": usr_adr_list, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -224,9 +223,9 @@ def insert_record(request, user_adr):
 @json_response
 def get_record_by_id(request, record_id):
     result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
-    result[0] = smart_contract.bytes_to_address(result[0])
-    result[1] = str(result[1])
-    result[2] = str(result[2])
+    result[0] = bytes_to_address(result[0])
+    result[1] = bytestr_to_str(result[1])
+    result[2] = bytestr_to_str(result[2])
     return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -264,10 +263,10 @@ def insert_order(request):
 @json_response
 def get_order_by_id(request, order_id):
     result, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
-    result[0] = smart_contract.bytes_to_address(result[0])
-    result[1] = str(result[1])
+    result[0] = bytes_to_address(result[0])
+    result[1] = parse_record_id_list(str(result[1]))
     result[2] = int.from_bytes(result[2], byteorder='big')
-    result[3] = str(result[3])
+    result[3] = bytestr_to_str(result[3])
     return {"result": result, "tx_unconfirmed": tx_unconfirmed}
 
 
@@ -277,13 +276,6 @@ def get_order_by_id(request, order_id):
 @json_response
 def remove_order_by_id(request, order_id):
     return "Not implemented yet"
-
-
-# def parse_record_id_list(record_id_list_str):
-#     arr = record_id_list_str[2:len(record_id_list_str)-1].split(':')
-#     res = []
-#     for item in arr:
-#         if
 
 
 if __name__ == "__main__":
