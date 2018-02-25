@@ -24,18 +24,18 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getUserList []
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getRecord [1]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 deleteRecord [1]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getOrderList []
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getOrderIdList []
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 getOrder [1]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 deleteOrder [1]
-neo> testinvoke 33127f8cbc573cea03ef35e9d1586e6aa208fc74 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getUserList []
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getRecord [1]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 deleteRecord [1]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getOrderList []
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getOrderIdList []
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getOrder [1]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 deleteOrder [1]
+neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.blockchain.vm.Neo.Runtime import Log, Notify
@@ -48,8 +48,8 @@ from boa.blockchain.vm.System.ExecutionEngine import GetScriptContainer, GetExec
 from boa.code.builtins import concat, list, range, substr
 
 # Script hash of the contract owner
-#OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
-OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
+OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
+#OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
 
 # Constants
 NEO_ASSET_ID = b'\x9b|\xff\xda\xa6t\xbe\xae\x0f\x93\x0e\xbe`\x85\xaf\x90\x93\xe5\xfeV\xb3J\\"\x0c\xcd\xcfn\xfc3o\xc5'

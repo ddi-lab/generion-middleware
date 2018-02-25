@@ -61,3 +61,29 @@ Data sellers and buyers can execute smart contracts and transfer the specified d
 ### 8.	Future
 
 Our vision for this project is to become self-sustaining global network to gain flawless transparency and independency. 
+
+### 9.	Instructions
+
+1. Install dependencies. Follow instructions from [neo-python](https://github.com/CityOfZion/neo-python)
+2. Open CLI
+
+
+    python prompt.py -c protocol.coz.json
+    
+3. Open wallet, do wallet rebuild and wait until 100% synchronization
+
+
+    neo> open wallet ./identity-wallets/coz-test-wallet.db3
+    neo> wallet rebuild
+
+    
+4. You may invoke SmartContract methods from inside CLI
+    
+
+    neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getUserList []
+    
+3. You can also run middleware to use REST API
+
+
+    python identity/api.py
+    
