@@ -326,6 +326,53 @@ def remove_order_by_id(request, order_id):
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
+@app.route('/identity/orders/<order_id>/purchase', methods=['POST'])
+@authenticated
+@catch_exceptions
+@json_response
+def purchase_order_by_id(request, order_id):
+    try:
+        body = json.loads(request.content.read().decode("utf-8"))
+    except JSONDecodeError as e:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "JSON Error: %s" % str(e))
+
+    if "pub_key" not in body:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Missing pub_key")
+    pub_key = body["pub_key"]
+
+    if "attach_neo" not in body:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Missing attach_neo")
+
+    attach_neo = int(body["attach_neo"])
+    if attach_neo < 0:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "attach_neo can not be negative")
+
+    order, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
+    if len(order) == 4:
+        order[0] = bytes_to_address(order[0])
+        order[1] = parse_record_id_list(str(order[1]))
+        order[2] = int.from_bytes(order[2], byteorder='big')
+        order[3] = bytestr_to_str(order[3])
+    else:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Order doesn't exist")
+
+    if order[3] != '\\x00':
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Already purchased")
+
+    if attach_neo < order[2]:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "NEO required: "+str(order[2]))
+
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke_with_attachments("neo", attach_neo, "purchaseData", order_id, pub_key)
+    return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", action="store", help="Config file (default. %s)" % PROTOCOL_CONFIG, default=PROTOCOL_CONFIG)

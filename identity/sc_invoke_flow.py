@@ -44,7 +44,7 @@ class IdentitySmartContract():
 
         self.smart_contract = SmartContract(contract_hash)
 
-        self.tx_unconfirmed = set()
+        self.tx_unconfirmed = dict()
         self._tx_unconfirmed_loop = task.LoopingCall(self.update_tx_unconfirmed)
         self._tx_unconfirmed_loop.start(5)
 
@@ -71,7 +71,7 @@ class IdentitySmartContract():
             if tx:
                 sent_tx_hash = tx.Hash.ToString()
                 logger.info("Transfer success, transaction underway: %s" % sent_tx_hash)
-                self.tx_unconfirmed.add(sent_tx_hash)
+                self.tx_unconfirmed[sent_tx_hash] = 0
                 return sent_tx_hash
             return False
         finally:
@@ -81,20 +81,17 @@ class IdentitySmartContract():
         return self.transfer("gas", "API", usr_adr, 100)
 
     def test_invoke(self, method_name, *args):
-        try:
-            result = self._invoke_method(False, method_name, *args)
-            return result, list(self.tx_unconfirmed)
-        except:
-            self.close_wallet()
-            raise
+        result = self._invoke_method(False, None, method_name, *args)
+        return result, list(self.tx_unconfirmed.keys())
 
     def invoke(self, method_name, *args):
-        try:
-            result, tx_hash = self._invoke_method(True, method_name, *args)
-            return result, list(self.tx_unconfirmed), tx_hash
-        except:
-            self.close_wallet()
-            raise
+        result, tx_hash = self._invoke_method(True, None, method_name, *args)
+        return result, list(self.tx_unconfirmed.keys()), tx_hash
+
+    def invoke_with_attachments(self, asset, amount, method_name, *args):
+        attachments = "--attach-"+asset+"="+str(amount)
+        result, tx_hash = self._invoke_method(True, attachments, method_name, *args)
+        return result, list(self.tx_unconfirmed.keys()), tx_hash
 
     def open_wallet(self):
         """ Open a wallet. Needed for invoking contract methods. """
@@ -129,72 +126,85 @@ class IdentitySmartContract():
         return False
 
     def update_tx_unconfirmed(self):
-        for tx_hash in self.tx_unconfirmed:
+        for (tx_hash, time_passed) in self.tx_unconfirmed.items():
             found = self.find_tx(tx_hash)
             if found:
                 logger.info("Transaction found! %s" % tx_hash)
-                self.tx_unconfirmed.remove(tx_hash)
+                self.tx_unconfirmed.pop(tx_hash)
                 break
+            time_passed += 5
+            if time_passed > 120:  # wait 2 minutes
+                logger.info("Transaction failed :( %s" % tx_hash)
+                self.tx_unconfirmed.pop(tx_hash)
+                break
+            else:
+                self.tx_unconfirmed[tx_hash] = time_passed
 
-    def _invoke_method(self, send_tx_needed, method_name, *args):
+    def _invoke_method(self, send_tx_needed, attachments, method_name, *args):
         """ invoke a method of the smart contract """
 
         logger.info("invoke_method: method_name=%s, args=%s", method_name, args)
         logger.info("Block %s / %s" % (str(Blockchain.Default().Height), str(Blockchain.Default().HeaderHeight)))
 
-        self.open_wallet()
+        try:
+            self.open_wallet()
 
-        if not self.wallet:
-            raise Exception("Open a wallet before invoking a smart contract method.")
+            if not self.wallet:
+                raise Exception("Open a wallet before invoking a smart contract method.")
 
-        logger.info("making sure wallet is synced...")
-        time.sleep(3)
+            logger.info("making sure wallet is synced...")
+            time.sleep(3)
 
-        # Wait until wallet is synced:
-        percent_synced = 0
-        wallet_synced = False
-        for i in range(0, 5):
-            percent_synced = int(100 * self.wallet._current_height / Blockchain.Default().Height)
-            if percent_synced > 99:
-                wallet_synced = True
-                break
-            logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (self.wallet._current_height, percent_synced))
-            time.sleep(5)
-        if not wallet_synced:
-            raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
+            # Wait until wallet is synced:
+            percent_synced = 0
+            wallet_synced = False
+            for i in range(0, 5):
+                percent_synced = int(100 * self.wallet._current_height / Blockchain.Default().Height)
+                if percent_synced > 99:
+                    wallet_synced = True
+                    break
+                logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (self.wallet._current_height, percent_synced))
+                time.sleep(5)
+            if not wallet_synced:
+                raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
 
-        _args = [self.contract_hash, method_name, str(list(args))]
+            _args = [self.contract_hash, method_name, str(list(args))]
+            if attachments:
+                _args.append(attachments)
 
-        logger.info("TestInvokeContract args: %s" % _args)
-        tx, fee, results, num_ops = TestInvokeContract(self.wallet, _args)
-        if not tx:
-            raise Exception("TestInvokeContract failed")
+            logger.info("TestInvokeContract args: %s" % _args)
+            tx, fee, results, num_ops = TestInvokeContract(self.wallet, _args)
+            if not tx:
+                raise Exception("TestInvokeContract failed")
 
-        logger.info("TestInvokeContract fee: %s" % fee)
-        logger.info("TestInvokeContract results: %s" % [str(item) for item in results])
-        logger.info("TestInvokeContract RESULT: %s ", stack_item_to_py(results[0]))
-        logger.info("TestInvokeContract num_ops: %s" % num_ops)
-        result = stack_item_to_py(results[0])
+            logger.info("TestInvokeContract fee: %s" % fee)
+            logger.info("TestInvokeContract results: %s" % [str(item) for item in results])
+            logger.info("TestInvokeContract RESULT: %s ", stack_item_to_py(results[0]))
+            logger.info("TestInvokeContract num_ops: %s" % num_ops)
+            result = stack_item_to_py(results[0])
 
-        if not send_tx_needed:
+            if not send_tx_needed:
+                self.close_wallet()
+                return result
+
+            logger.info("TestInvokeContract done, calling InvokeContract now...")
+
+            if not self.wallet_has_gas():
+                logger.error("Oh no, wallet has no gas!")
+                logger.info(self.wallet.GetSyncedBalances())
+                raise Exception("Wallet has no gas.")
+
+            sent_tx = InvokeContract(self.wallet, tx, fee)
+
+            if sent_tx:
+                sent_tx_hash = sent_tx.Hash.ToString()
+                logger.info("InvokeContract success, transaction underway: %s" % sent_tx_hash)
+                self.tx_unconfirmed[sent_tx_hash] = 0
+                self.close_wallet()
+                return result, sent_tx_hash
+
+            else:
+                raise Exception("InvokeContract failed")
+        except:
             self.close_wallet()
-            return result
-
-        logger.info("TestInvokeContract done, calling InvokeContract now...")
-
-        if not self.wallet_has_gas():
-            logger.error("Oh no, wallet has no gas!")
-            logger.info(self.wallet.GetSyncedBalances())
-            raise Exception("Wallet has no gas.")
-
-        sent_tx = InvokeContract(self.wallet, tx, fee)
-
-        if sent_tx:
-            sent_tx_hash = sent_tx.Hash.ToString()
-            logger.info("InvokeContract success, transaction underway: %s" % sent_tx_hash)
-            self.tx_unconfirmed.add(sent_tx_hash)
-            self.close_wallet()
-            return result, sent_tx_hash
-
-        else:
-            raise Exception("InvokeContract failed")
+            raise
