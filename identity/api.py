@@ -35,22 +35,22 @@ from neo.Core.Blockchain import Blockchain
 from neo.Settings import settings
 
 from identity.sc_invoke_flow import IdentitySmartContract
-from identity.utils import bytestr_to_str, parse_record_id_list, bytes_to_address
+from identity.utils import bytestr_to_str, parse_id_list, bytes_to_address
 
 # Set constants from env vars or use default
 API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
 
 # COZ TEST CONFIG
-PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
-WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
-WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
-CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "99f7a7b998b8b5c792a1572d2f0caa250f17c7e8")
+# PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
+# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
+# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
+# CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "99f7a7b998b8b5c792a1572d2f0caa250f17c7e8")
 
-# PRIVNET CONFIG
-# PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
-# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
-# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
-# CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "33127f8cbc573cea03ef35e9d1586e6aa208fc74")
+#  PRIVNET CONFIG
+PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
+WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
+WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
+CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "edd4e40434cae1eb14156f2552b94c29a5468b1a")
 
 print(PROTOCOL_CONFIG, API_PORT, CONTRACT_HASH, WALLET_FILE, WALLET_PWD)
 
@@ -168,7 +168,7 @@ def find_transaction(request, tx_hash):
 @catch_exceptions
 @json_response
 def get_users(request):
-    result, tx_unconfirmed = smart_contract.test_invoke("getUserList")
+    result, tx_unconfirmed, tx_hash = smart_contract.invoke_single("getUserList", [])
     usr_adr_list = []
     for id_bytes in result:
         usr_adr_list.append(bytes_to_address(id_bytes))
@@ -180,7 +180,7 @@ def get_users(request):
 @catch_exceptions
 @json_response
 def get_records_by_user_id(request, user_adr):
-    result, tx_unconfirmed = smart_contract.test_invoke("getRecordIdList", user_adr)
+    result, tx_unconfirmed, tx_hash = smart_contract.invoke_single("getRecordIdList", [user_adr])
     id_list = []
     for id in result:
         id_list.append(int.from_bytes(id, byteorder='little'))
@@ -202,18 +202,25 @@ def insert_record(request, user_adr):
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "Address not 34 characters")
 
-    if "data_pub_key" not in body:
+    if "records" not in body or not isinstance(body["records"], list) or len(body["records"]) < 1:
         request.setResponseCode(400)
-        return build_error(STATUS_ERROR_JSON, "Missing data_pub_key")
+        return build_error(STATUS_ERROR_JSON, "You should pass 'records': [{key1, data1}, {key2, data2}]")
 
-    if "data_encr" not in body:
-        request.setResponseCode(400)
-        return build_error(STATUS_ERROR_JSON, "Missing data_encr")
+    invoke_list = []
+    for item in body["records"]:
+        if "data_pub_key" not in item:
+            request.setResponseCode(400)
+            return build_error(STATUS_ERROR_JSON, "Missing data_pub_key")
 
-    data_pub_key = body["data_pub_key"]
-    data_encr = body["data_encr"]
+        if "data_encr" not in item:
+            request.setResponseCode(400)
+            return build_error(STATUS_ERROR_JSON, "Missing data_encr")
 
-    result, tx_unconfirmed, tx_hash= smart_contract.invoke("createRecord", user_adr, data_pub_key, data_encr)
+        data_pub_key = item["data_pub_key"]
+        data_encr = item["data_encr"]
+        invoke_list.append(("createRecord", [user_adr, data_pub_key, data_encr]))
+
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke_multi(invoke_list, True)
     return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
@@ -222,14 +229,32 @@ def insert_record(request, user_adr):
 @catch_exceptions
 @json_response
 def get_record_by_id(request, record_id):
-    result, tx_unconfirmed = smart_contract.test_invoke("getRecord", record_id)
-    if len(result) == 3:
-        result[0] = bytes_to_address(result[0])
-        result[1] = bytestr_to_str(result[1])
-        result[2] = bytestr_to_str(result[2])
-    else:
-        result = []
-    return {"result": result, "tx_unconfirmed": tx_unconfirmed}
+    record_id_list = []
+    try:
+        id = int(record_id)
+        record_id_list.append(id)
+    except:
+        record_id_list = parse_id_list(record_id)
+    if not record_id_list:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Invalid record id list. Format: {i1:i2:i3}")
+
+    invoke_list = []
+    for id in record_id_list:
+        invoke_list.append(("getRecord", [id]))
+
+    results, tx_unconfirmed, tx_hash = smart_contract.invoke_multi(invoke_list)
+    result_list = []
+    for result in results:
+        if len(result) == 3:
+            result[0] = bytes_to_address(result[0])
+            result[1] = bytestr_to_str(result[1])
+            result[2] = bytestr_to_str(result[2])
+        else:
+            result = []
+        result_list.append(result)
+
+    return {"result": result_list, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/records/<record_id>', methods=['DELETE'])
@@ -237,7 +262,7 @@ def get_record_by_id(request, record_id):
 @catch_exceptions
 @json_response
 def remove_record_by_id(request, record_id):
-    result, tx_unconfirmed, tx_hash= smart_contract.invoke("deleteRecord", record_id)
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke_single("deleteRecord", [record_id], True)
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
@@ -246,7 +271,7 @@ def remove_record_by_id(request, record_id):
 @catch_exceptions
 @json_response
 def get_orders(request):
-    result, tx_unconfirmed = smart_contract.test_invoke("getOrderIdList")
+    result, tx_unconfirmed, tx_hash = smart_contract.invoke_single("getOrderIdList", [])
     id_list = []
     for id in result:
         id_list.append(int.from_bytes(id, byteorder='little'))
@@ -297,7 +322,7 @@ def insert_order(request, user_adr):
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "Price can not be negative")
 
-    result, tx_unconfirmed, tx_hash= smart_contract.invoke("createOrder", user_adr, record_id_list_str, price)
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke_single("createOrder", [user_adr, record_id_list_str, price], True)
     return {"result": result, "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
@@ -306,15 +331,33 @@ def insert_order(request, user_adr):
 @catch_exceptions
 @json_response
 def get_order_by_id(request, order_id):
-    result, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
-    if len(result) == 4:
-        result[0] = bytes_to_address(result[0])
-        result[1] = parse_record_id_list(str(result[1]))
-        result[2] = int.from_bytes(result[2], byteorder='little')
-        result[3] = bytestr_to_str(result[3])
-    else:
-        result = []
-    return {"result": result, "tx_unconfirmed": tx_unconfirmed}
+    order_id_list = []
+    try:
+        id = int(order_id)
+        order_id_list.append(id)
+    except:
+        order_id_list = parse_id_list(order_id)
+    if not order_id_list:
+        request.setResponseCode(400)
+        return build_error(STATUS_ERROR_JSON, "Invalid order_id list. Format: {i1:i2:i3}")
+
+    invoke_list = []
+    for id in order_id_list:
+        invoke_list.append(("getOrder", [id]))
+
+    results, tx_unconfirmed, tx_hash = smart_contract.invoke_multi(invoke_list)
+    result_list = []
+    for result in results:
+        if len(result) == 4:
+            result[0] = bytes_to_address(result[0])
+            result[1] = parse_id_list(bytestr_to_str(str(result[1])))
+            result[2] = int.from_bytes(result[2], byteorder='little')
+            result[3] = bytestr_to_str(result[3])
+        else:
+            result = []
+        result_list.append(result)
+
+    return {"result": result_list, "tx_unconfirmed": tx_unconfirmed}
 
 
 @app.route('/identity/orders/<order_id>', methods=['DELETE'])
@@ -322,7 +365,7 @@ def get_order_by_id(request, order_id):
 @catch_exceptions
 @json_response
 def remove_order_by_id(request, order_id):
-    result, tx_unconfirmed, tx_hash= smart_contract.invoke("deleteOrder", order_id)
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke_single("deleteOrder", [order_id], True)
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 
@@ -351,10 +394,10 @@ def purchase_order_by_id(request, order_id):
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "attach_neo can not be negative")
 
-    order, tx_unconfirmed = smart_contract.test_invoke("getOrder", order_id)
+    order, tx_unconfirmed, tx_hash = smart_contract.invoke_single("getOrder", [order_id])
     if len(order) == 4:
         order[0] = bytes_to_address(order[0])
-        order[1] = parse_record_id_list(str(order[1]))
+        order[1] = parse_id_list(bytestr_to_str(str(order[1])))
         order[2] = int.from_bytes(order[2], byteorder='little')
         order[3] = bytestr_to_str(order[3])
     else:
@@ -369,7 +412,7 @@ def purchase_order_by_id(request, order_id):
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "NEO required: "+str(order[2]))
 
-    result, tx_unconfirmed, tx_hash= smart_contract.invoke_with_attachments("neo", attach_neo, "purchaseData", order_id, pub_key)
+    result, tx_unconfirmed, tx_hash= smart_contract.invoke_single("purchaseData", [order_id, pub_key], True, attach_neo)
     return {"result": str(result), "tx_unconfirmed": tx_unconfirmed, "tx_hash": tx_hash}
 
 

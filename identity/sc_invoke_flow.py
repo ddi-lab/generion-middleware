@@ -7,10 +7,15 @@ from twisted.internet import task
 from neo.Implementations.Wallets.peewee.UserWallet import UserWallet
 from neo.Prompt.Commands.Invoke import InvokeContract, TestInvokeContract, test_invoke
 from neo.Prompt.Commands.Send import construct_and_send
+from neo.Prompt.Utils import parse_param
 from neo.Settings import settings
 from neo.Core.Blockchain import Blockchain
-from neo.contrib.smartcontract import SmartContract
+from neo.Core.TX.Transaction import TransactionOutput
 from neo.VM.InteropService import stack_item_to_py
+from neo.VM.ScriptBuilder import ScriptBuilder
+from neo.Blockchain import GetBlockchain
+from neo.contrib.smartcontract import SmartContract
+from neocore.Fixed8 import Fixed8
 
 from identity.utils import bytes_to_address
 
@@ -57,7 +62,7 @@ class IdentitySmartContract():
         def sc_notify(event):
             """ This method catches Runtime.Notify calls """
             logger.info("sc_notify event: %s", str(event))
-            if event.event_payload[0].decode("utf-8") == "transfer":
+            if not event.test_mode and event.event_payload[0].decode("utf-8") == "transfer":
                 address_from = bytes_to_address(event.event_payload[1])
                 address_to = bytes_to_address(event.event_payload[2])
                 amount = int.from_bytes(event.event_payload[3], byteorder='little')
@@ -80,18 +85,13 @@ class IdentitySmartContract():
     def claim_gas(self, usr_adr):
         return self.transfer("gas", "API", usr_adr, 100)
 
-    def test_invoke(self, method_name, *args):
-        result = self._invoke_method(False, None, method_name, *args)
-        return result, list(self.tx_unconfirmed.keys())
+    def invoke_single(self, method_name, args, need_transaction=False, amount_neo=None):
+        results, tx_hash = self._invoke_method([(method_name, args)], need_transaction, amount_neo)
+        return results[0], list(self.tx_unconfirmed.keys()), tx_hash
 
-    def invoke(self, method_name, *args):
-        result, tx_hash = self._invoke_method(True, None, method_name, *args)
-        return result, list(self.tx_unconfirmed.keys()), tx_hash
-
-    def invoke_with_attachments(self, asset, amount, method_name, *args):
-        attachments = "--attach-"+asset+"="+str(amount)
-        result, tx_hash = self._invoke_method(True, attachments, method_name, *args)
-        return result, list(self.tx_unconfirmed.keys()), tx_hash
+    def invoke_multi(self, invoke_list, need_transaction=False, amount_neo=None):
+        results, tx_hash = self._invoke_method(invoke_list, need_transaction, amount_neo)
+        return results, list(self.tx_unconfirmed.keys()), tx_hash
 
     def open_wallet(self):
         """ Open a wallet. Needed for invoking contract methods. """
@@ -146,10 +146,10 @@ class IdentitySmartContract():
             else:
                 self.tx_unconfirmed[tx_hash] = time_passed
 
-    def _invoke_method(self, send_tx_needed, attachments, method_name, *args):
+    def _invoke_method(self, invoke_list, send_tx_needed, neo_to_attach=None):
         """ invoke a method of the smart contract """
 
-        logger.info("invoke_method: method_name=%s, args=%s", method_name, args)
+        logger.info("invoke_method: %s", str(invoke_list))
         logger.info("Block %s / %s" % (str(Blockchain.Default().Height), str(Blockchain.Default().HeaderHeight)))
 
         try:
@@ -175,24 +175,46 @@ class IdentitySmartContract():
             if not wallet_synced:
                 raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
 
-            _args = [self.contract_hash, method_name, str(list(args))]
-            if attachments:
-                _args.append(attachments)
+            # access contract
+            BC = GetBlockchain()
+            contract = BC.GetContract(self.contract_hash)
+            if not contract:
+                raise Exception("Contract %s not found" % self.contract_hash)
 
-            logger.info("TestInvokeContract args: %s" % _args)
-            tx, fee, results, num_ops = TestInvokeContract(self.wallet, _args)
+            # process attachments
+            outputs = []
+            if neo_to_attach:
+                value = Fixed8.TryParse(int(neo_to_attach))
+                output = TransactionOutput(AssetId=Blockchain.SystemShare().Hash,
+                                           Value=value,
+                                           script_hash=contract.Code.ScriptHash(),
+                                           )
+                outputs.append(output)
+
+            # construct script
+            sb = ScriptBuilder()
+            for index, (method, args) in enumerate(invoke_list):
+                params = parse_param(str(args))
+                sb.EmitAppCallWithOperationAndArgs(contract.Code.ScriptHash(), method, params)
+                logger.info("TestInvokeContract %s method: %s" % (str(index), str(method)))
+                logger.info("TestInvokeContract %s args: %s" % (str(index), str(params)))
+
+            # make testinvoke
+            tx, fee, results, num_ops = test_invoke(sb.ToArray(), self.wallet, outputs)
             if not tx:
                 raise Exception("TestInvokeContract failed")
 
             logger.info("TestInvokeContract fee: %s" % fee)
-            logger.info("TestInvokeContract results: %s" % [str(item) for item in results])
-            logger.info("TestInvokeContract RESULT: %s ", stack_item_to_py(results[0]))
+            logger.info("TestInvokeContract results: %s ", [stack_item_to_py(item) for item in results])
             logger.info("TestInvokeContract num_ops: %s" % num_ops)
-            result = stack_item_to_py(results[0])
+            results = [stack_item_to_py(item) for item in results]
+
+            if(len(results) == 1 and results[0] == b'\x00'):
+                raise Exception("TestInvokeContract returned False")
 
             if not send_tx_needed:
                 self.close_wallet()
-                return result
+                return results, None
 
             logger.info("TestInvokeContract done, calling InvokeContract now...")
 
@@ -208,7 +230,7 @@ class IdentitySmartContract():
                 logger.info("InvokeContract success, transaction underway: %s" % sent_tx_hash)
                 self.tx_unconfirmed[sent_tx_hash] = 0
                 self.close_wallet()
-                return result, sent_tx_hash
+                return results, sent_tx_hash
 
             else:
                 raise Exception("InvokeContract failed")

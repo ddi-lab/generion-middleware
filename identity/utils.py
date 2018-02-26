@@ -6,8 +6,8 @@ def bytestr_to_str(bytestr):
     return string[2:len(string)-1]
 
 
-def parse_record_id_list(record_id_list_str):
-    arr = bytestr_to_str(record_id_list_str).split(':')
+def parse_id_list(record_id_list_str):
+    arr = record_id_list_str.split(':')
     res = []
     for item in arr:
         try:
