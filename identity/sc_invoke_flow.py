@@ -72,6 +72,7 @@ class IdentitySmartContract():
         logger.info("Transfer %s %s from %s to %s", amount, asset, address_from, address_to)
         try:
             self.open_wallet()
+            self.sync_wallet(10)
             tx = construct_and_send(None, self.wallet, [asset, address_to, str(amount)], False)
             if tx:
                 sent_tx_hash = tx.Hash.ToString()
@@ -79,6 +80,8 @@ class IdentitySmartContract():
                 self.tx_unconfirmed[sent_tx_hash] = 0
                 return sent_tx_hash
             return False
+        except Exception as e:
+            logger.info("Transfer failed: %s" % str(e))
         finally:
             self.close_wallet()
 
@@ -113,6 +116,21 @@ class IdentitySmartContract():
         self.wallet = UserWallet.Open(self.wallet_path, self.wallet_pass)
         self._walletdb_loop = task.LoopingCall(self.wallet.ProcessBlocks)
         self._walletdb_loop.start(1)
+
+    def sync_wallet(self, attempts):
+        percent_synced = 0
+        wallet_synced = False
+        for i in range(0, attempts):
+            percent_synced = int(100 * self.wallet._current_height / Blockchain.Default().Height)
+            if percent_synced > 99:
+                wallet_synced = True
+                break
+            logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (
+            self.wallet._current_height, percent_synced))
+            time.sleep(5)
+            self.reopen_wallet()
+        if not wallet_synced:
+            raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
 
     def wallet_has_gas(self):
         # Make sure no tx is in progress and we have GAS
@@ -162,18 +180,7 @@ class IdentitySmartContract():
             time.sleep(3)
 
             # Wait until wallet is synced:
-            percent_synced = 0
-            wallet_synced = False
-            for i in range(0, 5):
-                percent_synced = int(100 * self.wallet._current_height / Blockchain.Default().Height)
-                if percent_synced > 99:
-                    wallet_synced = True
-                    break
-                logger.info("waiting for wallet sync... height: %s. percent synced: %s" % (self.wallet._current_height, percent_synced))
-                time.sleep(5)
-                self.reopen_wallet()
-            if not wallet_synced:
-                raise Exception("Wallet is not synced yet (%s/100). Try again later." % percent_synced)
+            self.sync_wallet(5)
 
             # access contract
             BC = GetBlockchain()
