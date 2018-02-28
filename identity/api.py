@@ -41,16 +41,16 @@ from identity.utils import bytestr_to_str, parse_id_list, bytes_to_address
 API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
 
 # COZ TEST CONFIG
-# PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
-# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
-# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
-# CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "99f7a7b998b8b5c792a1572d2f0caa250f17c7e8")
+PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
+WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/coz-test-wallet.db3"))
+WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "identity123")
+CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "99f7a7b998b8b5c792a1572d2f0caa250f17c7e8")
 
-#  PRIVNET CONFIG
-PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
-WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
-WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
-CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "edd4e40434cae1eb14156f2552b94c29a5468b1a")
+# PRIVNET CONFIG
+# PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
+# WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
+# WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
+# CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "33127f8cbc573cea03ef35e9d1586e6aa208fc74")
 
 print(PROTOCOL_CONFIG, API_PORT, CONTRACT_HASH, WALLET_FILE, WALLET_PWD)
 
