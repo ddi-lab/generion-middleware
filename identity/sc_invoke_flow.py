@@ -36,6 +36,7 @@ class IdentitySmartContract():
     wallet_mutex = None
 
     tx_unconfirmed = None
+    tx_failed = None
     _tx_unconfirmed_loop = None
     wallet = None
     _walletdb_loop = None
@@ -50,6 +51,7 @@ class IdentitySmartContract():
         self.smart_contract = SmartContract(contract_hash)
 
         self.tx_unconfirmed = dict()
+        self.tx_failed = []
         self._tx_unconfirmed_loop = task.LoopingCall(self.update_tx_unconfirmed)
         self._tx_unconfirmed_loop.start(5)
 
@@ -90,11 +92,11 @@ class IdentitySmartContract():
 
     def invoke_single(self, method_name, args, need_transaction=False, amount_neo=None):
         results, tx_hash = self._invoke_method([(method_name, args)], need_transaction, amount_neo)
-        return results[0], list(self.tx_unconfirmed.keys()), tx_hash
+        return results[0], list(self.tx_unconfirmed.keys()), self.tx_failed, tx_hash
 
     def invoke_multi(self, invoke_list, need_transaction=False, amount_neo=None):
         results, tx_hash = self._invoke_method(invoke_list, need_transaction, amount_neo)
-        return results, list(self.tx_unconfirmed.keys()), tx_hash
+        return results, list(self.tx_unconfirmed.keys()), self.tx_failed, tx_hash
 
     def open_wallet(self):
         """ Open a wallet. Needed for invoking contract methods. """
@@ -160,6 +162,7 @@ class IdentitySmartContract():
             if time_passed > 120:  # wait 2 minutes
                 logger.info("Transaction failed :( %s" % tx_hash)
                 self.tx_unconfirmed.pop(tx_hash)
+                self.tx_failed.append(tx_hash)
                 break
             else:
                 self.tx_unconfirmed[tx_hash] = time_passed

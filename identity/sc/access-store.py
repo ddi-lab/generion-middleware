@@ -4,9 +4,12 @@ Identity Smart Contract
 Testing:
 
 neo> build identity/sc/access-store.py test 0710 05 True False getUserList []
+neo> build identity/sc/access-store.py test 0710 05 True False setUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT", "PUB_KEY"]
+neo> build identity/sc/access-store.py test 0710 05 True False getUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
 neo> build identity/sc/access-store.py test 0710 05 True False getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
 neo> build identity/sc/access-store.py test 0710 05 True False getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> build identity/sc/access-store.py test 0710 05 True False createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> build identity/sc/access-store.py test 0710 05 True False createRecord ["AG92fB2ZM7wnRXcxp7sn5CWiNVkJmXYwy6","AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> build identity/sc/access-store.py test 0710 05 True False verifyRecord [1]
 neo> build identity/sc/access-store.py test 0710 05 True False getRecord [1]
 neo> build identity/sc/access-store.py test 0710 05 True False deleteRecord [1]
 neo> build identity/sc/access-store.py test 0710 05 True False getOrderList []
@@ -24,18 +27,21 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getUserList []
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 createRecord ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getRecord [1]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 deleteRecord [1]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getOrderList []
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getOrderIdList []
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getOrder [1]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 deleteOrder [1]
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 setUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT", "PUB_KEY"]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getUserList []
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 createRecord ["AG92fB2ZM7wnRXcxp7sn5CWiNVkJmXYwy6","AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 verifyRecord [1]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getRecord [1]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 deleteRecord [1]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getOrderList []
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getOrderIdList []
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getOrder [1]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 deleteOrder [1]
+neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.blockchain.vm.Neo.Runtime import Log, Notify
@@ -48,21 +54,23 @@ from boa.blockchain.vm.System.ExecutionEngine import GetScriptContainer, GetExec
 from boa.code.builtins import concat, list, range, substr
 
 # Script hash of the contract owner
-OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
-#OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
+#OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
+OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
 
 # Constants
 NEO_ASSET_ID = b'\x9b|\xff\xda\xa6t\xbe\xae\x0f\x93\x0e\xbe`\x85\xaf\x90\x93\xe5\xfeV\xb3J\\"\x0c\xcd\xcfn\xfc3o\xc5'
 
-USR_ADR_LIST = 'usr_adr_list'
+USR_ADR_LIST_KEY = 'usr_adr_list'
+USR_ADR_PUBKEY_PREFIX = 'usr_adr_pk_'
 
-RECORD_ID_LIST_PREFIX = 'rcd_id_list_'
-RECORD_ID_PREFIX = 'rid_'
-NEXT_RECORD_ID_KEY = 'next_rcd_id'
+RECORD_ID_LIST_PREFIX = 'ridl_'
+RECORD_ID_META_PREFIX = 'ridm_'
+RECORD_ID_DATA_PREFIX = 'ridd_'
+NEXT_RECORD_ID_KEY = 'next_rid'
 
-ORDER_ID_LIST_PREFIX = 'ord_id_list_'
-ORDER_ID_PREFIX = 'ord_'
-NEXT_ORDER_ID_KEY = 'next_ord_id'
+ORDER_ID_LIST_PREFIX = 'oidl_'
+ORDER_ID_PREFIX = 'orid_'
+NEXT_ORDER_ID_KEY = 'next_oid'
 
 # Messages
 UNKNOWN_OP = 'unknown operation'
@@ -92,6 +100,21 @@ def Main(operation, args):
             return r
         else:
             return WRONG_ARGS
+    elif operation == 'setUserPubKey':
+        if len(args) == 2:
+            usr_adr = args[0]
+            pub_key = args[1]
+            r = SetUserPubKey(usr_adr, pub_key)
+            return r
+        else:
+            return WRONG_ARGS
+    elif operation == 'getUserPubKey':
+        if len(args) == 1:
+            usr_adr = args[0]
+            r = GetUserPubKey(usr_adr)
+            return r
+        else:
+            return WRONG_ARGS
 
     # <<< DATA RECORD CRUD METHODS >>>
     elif operation == 'getRecordList':
@@ -111,11 +134,20 @@ def Main(operation, args):
             return WRONG_ARGS
 
     elif operation == 'createRecord':
-        if len(args) == 3:
-            usr_adr = args[0]
-            data_pub_key = args[1]
-            data_encr = args[2]
-            r = InsertRecord(usr_adr, data_pub_key, data_encr)
+        if len(args) == 4:
+            creator_adr = args[0]
+            usr_adr = args[1]
+            data_pub_key = args[2]
+            data_encr = args[3]
+            r = InsertRecord(creator_adr, usr_adr, data_pub_key, data_encr)
+            return r
+        else:
+            return WRONG_ARGS
+
+    elif operation == 'verifyRecord':
+        if len(args) == 1:
+            record_id = args[0]
+            r = VerifyRecord(record_id)
             return r
         else:
             return WRONG_ARGS
@@ -191,11 +223,29 @@ def Main(operation, args):
 # <<< MAIN METHODS >>>
 def GetUserList():
     context = GetContext()
-    users_serialized = Get(context, USR_ADR_LIST)
+    users_serialized = Get(context, USR_ADR_LIST_KEY)
     if not users_serialized:
         return []
     users = deserialize_bytearray(users_serialized)
     return users
+
+
+def SetUserPubKey(usr_adr, pub_key):
+    if not check_permission(usr_adr):
+        Log("Must be owner to set public key")
+        return False
+
+    usrpk_key = concat(USR_ADR_PUBKEY_PREFIX, usr_adr)
+    context = GetContext()
+    Put(context, usrpk_key, pub_key)
+    return True
+
+
+def GetUserPubKey(usr_adr):
+    usrpk_key = concat(USR_ADR_PUBKEY_PREFIX, usr_adr)
+    context = GetContext()
+    pub_key = Get(context, usrpk_key)
+    return pub_key
 
 
 def GetRecordList(usr_adr):
@@ -219,9 +269,9 @@ def GetRecordIdList(usr_adr):
     return records_id
 
 
-def InsertRecord(usr_adr, data_pub_key, data_encr):
-    if not check_permission(usr_adr):
-        Log("Must be owner to insert a record")
+def InsertRecord(creator_adr, usr_adr, data_pub_key, data_encr):
+    if not check_permission(creator_adr):
+        Log("Wrong creator_adr")
         return False
 
     users = GetUserList()
@@ -233,16 +283,18 @@ def InsertRecord(usr_adr, data_pub_key, data_encr):
         users.append(usr_adr)
         users_serialized = serialize_array(users)
         context = GetContext()
-        Put(context, USR_ADR_LIST, users_serialized)
+        Put(context, USR_ADR_LIST_KEY, users_serialized)
         msg = concat("New user: ", usr_adr)
         Log(msg)
 
     context = GetContext()
-    record_data = [usr_adr, data_pub_key, data_encr]
-    record_data_serialized = serialize_array(record_data)
+    record_meta = [usr_adr, data_pub_key, creator_adr, False]
+    record_meta_serialized = serialize_array(record_meta)
     record_id = next_id(NEXT_RECORD_ID_KEY)
-    record_key = concat(RECORD_ID_PREFIX, record_id)
-    Put(context, record_key, record_data_serialized)
+    record_meta_key = concat(RECORD_ID_META_PREFIX, record_id)
+    record_data_key = concat(RECORD_ID_DATA_PREFIX, record_id)
+    Put(context, record_meta_key, record_meta_serialized)
+    Put(context, record_data_key, data_encr)
 
     records_id = GetRecordIdList(usr_adr)
     records_id.append(record_id)
@@ -252,17 +304,49 @@ def InsertRecord(usr_adr, data_pub_key, data_encr):
 
     msg = concat("New record: ", record_id)
     Notify(msg)
+    return record_id
+
+
+def VerifyRecord(record_id):
+    context = GetContext()
+    record_meta_key = concat(RECORD_ID_META_PREFIX, record_id)
+    record_meta_serialized = Get(context, record_meta_key)
+    if not record_meta_serialized:
+        Log("Record doesn't exist")
+        return False
+
+    record_meta = deserialize_bytearray(record_meta_serialized)
+    usr_adr = record_meta[0]
+    pub_key = record_meta[1]
+    creator_adr = record_meta[2]
+    if not check_permission(usr_adr):
+        Log("Must be owner to verify a record")
+        return False
+
+    context = GetContext()
+    record_meta_upd = [usr_adr, pub_key, creator_adr, True]
+    record_meta_upd_serialized = serialize_array(record_meta_upd)
+    record_meta_key = concat(RECORD_ID_META_PREFIX, record_id)
+    Put(context, record_meta_key, record_meta_upd_serialized)
     return True
 
 
 def GetRecord(record_id):
     context = GetContext()
-    record_key = concat(RECORD_ID_PREFIX, record_id)
-    record_serialized = Get(context, record_key)
-    if not record_serialized:
+    record_meta_key = concat(RECORD_ID_META_PREFIX, record_id)
+    record_meta_serialized = Get(context, record_meta_key)
+    if not record_meta_serialized:
         Log("Record doesn't exist")
         return False
-    record = deserialize_bytearray(record_serialized)
+
+    record_meta = deserialize_bytearray(record_meta_serialized)
+    usr_adr = record_meta[0]
+    pub_key = record_meta[1]
+    creator_adr = record_meta[2]
+    is_verified = record_meta[3]
+    record_data_key = concat(RECORD_ID_DATA_PREFIX, record_id)
+    record_data = Get(context, record_data_key)
+    record = [usr_adr, pub_key, creator_adr, is_verified, record_data]
     return record
 
 
@@ -292,7 +376,7 @@ def DeleteRecord(record_id):
         context = GetContext()
         Put(context, record_id_list_key, records_serialized)
 
-        record_key = concat(RECORD_ID_PREFIX, record_id)
+        record_key = concat(RECORD_ID_META_PREFIX, record_id)
         Delete(context, record_key)
         return True
     else:
@@ -356,7 +440,7 @@ def InsertOrder(usr_adr, record_id_list_str, price):
 
     msg = concat("New order: ", order_id)
     Notify(msg)
-    return True
+    return order_id
 
 
 def GetOrder(order_id):
