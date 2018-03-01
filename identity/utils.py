@@ -16,7 +16,25 @@ def parse_id_list(record_id_list_str):
             pass
     return res
 
+
 def bytes_to_address(bytes):
     script_hash = UInt160(data=bytes)
     address = Crypto.ToAddress(script_hash)
     return address
+
+
+def byte_to_int(byte):
+    try:
+        return int(byte)
+    except:
+        return int.from_bytes(byte, byteorder='little')
+
+
+def byte_list_to_int_list(lst):
+    res = []
+    for item in lst:
+        try:
+            res.append(int(item))
+        except:
+            res.append(int.from_bytes(item, byteorder='little'))
+    return res
