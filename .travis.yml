@@ -1,13 +1,12 @@
 language: python
 python:
-  - "3.5"
+  - "3.6"
 
 addons:
   apt:
     packages:
     - libleveldb-dev
     - libsqlite3-dev
-
 
 # command to install dependencies
 install:
@@ -17,10 +16,12 @@ install:
 # command to run tests
 script:
   - coverage run -m unittest discover neo
+  - coverage run -m -a unittest discover boa_test
   - pycodestyle prompt.py
+  - pycodestyle api-server.py
   - pycodestyle neo
+  - pycodestyle examples
   - python prompt.py --version
-
 
 after_success:
     coveralls

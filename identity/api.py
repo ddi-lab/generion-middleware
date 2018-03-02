@@ -444,7 +444,7 @@ def purchase_order_by_id(request, order_id):
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "Order doesn't exist")
 
-    if order[3] != '\\x00':
+    if order[3] != '\\x00' and order[3] != '':
         request.setResponseCode(400)
         return build_error(STATUS_ERROR_JSON, "Already purchased")
 

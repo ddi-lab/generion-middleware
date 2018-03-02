@@ -39,19 +39,25 @@ class Contract(SerializableMixin, VerificationCode):
 
     @property
     def IsStandard(self):
-        scp = binascii.unhexlify(self.Script)
+        if len(self.Script) == 70:
+            self.Script = binascii.unhexlify(self.Script)
 
-        if len(scp) != 35:
+        if len(self.Script) != 35:
             return False
 
-        if scp[0] != 33 or scp[34] != int.from_bytes(CHECKSIG, 'little'):
+        if self.Script[0] != 33 or self.Script[34] != int.from_bytes(CHECKSIG, 'little'):
             return False
 
         return True
 
     @property
     def IsMultiSigContract(self):
-        scp = binascii.unhexlify(self.Script)
+        scp = self.Script
+
+        try:
+            scp = binascii.unhexlify(self.Script)
+        except binascii.Error:
+            pass
 
         if len(scp) < 37:
             return False
@@ -108,7 +114,7 @@ class Contract(SerializableMixin, VerificationCode):
 
         pk = [ECDSA.decode_secp256r1(p).G for p in publicKeys]
         return Contract(Contract.CreateMultiSigRedeemScript(m, pk),
-                        bytearray([ContractParameterType.Signature] * 3),
+                        bytearray(b'\x00\x00\x00'),
                         publicKeyHash)
 
     @staticmethod
@@ -123,7 +129,7 @@ class Contract(SerializableMixin, VerificationCode):
             neo.SmartContract.Contract: a Contract instance.
         """
         script = Contract.CreateSignatureRedeemScript(publicKey)
-        params = bytearray([ContractParameterType.Signature])
+        params = b'\x00'
         encoded = publicKey.encode_point(True)
         pubkey_hash = Crypto.ToScriptHash(encoded, unhex=True)
 
@@ -148,14 +154,15 @@ class Contract(SerializableMixin, VerificationCode):
 
     def Deserialize(self, reader):
         self.PublicKeyHash = reader.ReadUInt160()
-
         self.ParameterList = reader.ReadVarBytes()
-        script = bytearray(reader.ReadVarBytes()).hex()
-        self.Script = script.encode('utf-8')
+        script = bytearray(reader.ReadVarBytes())
+        self.Script = script
 
     def Serialize(self, writer):
         writer.WriteUInt160(self.PublicKeyHash)
         writer.WriteVarBytes(self.ParameterList)
+        if isinstance(self.Script, str):
+            self.Script = self.Script.encode('utf-8')
         writer.WriteVarBytes(self.Script)
 
     @staticmethod

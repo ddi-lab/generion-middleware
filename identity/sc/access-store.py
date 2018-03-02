@@ -44,14 +44,14 @@ neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 deleteOrder [1]
 neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
-from boa.blockchain.vm.Neo.Runtime import Log, Notify
-from boa.blockchain.vm.Neo.Runtime import CheckWitness
-from boa.blockchain.vm.Neo.Storage import GetContext, Get, Put, Delete
-from boa.blockchain.vm.Neo.Output import GetScriptHash, GetValue, GetAssetId
-from boa.blockchain.vm.Neo.Action import RegisterAction
-from boa.blockchain.vm.Neo.Transaction import Transaction, GetReferences, GetOutputs,GetUnspentCoins
-from boa.blockchain.vm.System.ExecutionEngine import GetScriptContainer, GetExecutingScriptHash
-from boa.code.builtins import concat, list, range, substr
+from boa.interop.Neo.Runtime import Log, Notify
+from boa.interop.Neo.Runtime import CheckWitness
+from boa.interop.Neo.Storage import GetContext, Get, Put, Delete
+from boa.interop.Neo.Output import GetScriptHash, GetValue, GetAssetId
+from boa.interop.Neo.Action import RegisterAction
+from boa.interop.Neo.Transaction import Transaction, GetReferences, GetOutputs,GetUnspentCoins
+from boa.interop.System.ExecutionEngine import GetScriptContainer, GetExecutingScriptHash
+from boa.builtins import concat, list, range, substr
 
 # Script hash of the contract owner
 #OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3

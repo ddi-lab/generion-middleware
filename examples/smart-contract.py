@@ -8,17 +8,10 @@ and several more. See the documentation here:
 http://neo-python.readthedocs.io/en/latest/smartcontracts.html
 """
 import threading
-import os
-import sys
 from time import sleep
 
 from logzero import logger
 from twisted.internet import reactor, task
-
-# Allow importing 'neo' from parent path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-sys.path.insert(0, parent_dir)
 
 from neo.contrib.smartcontract import SmartContract
 from neo.Network.NodeLeader import NodeLeader
@@ -63,9 +56,6 @@ def custom_background_code():
 
 
 def main():
-    PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.coz.json")
-    settings.setup(PROTOCOL_CONFIG)
-
     # Setup the blockchain
     blockchain = LevelDBBlockchain(settings.LEVELDB_PATH)
     Blockchain.RegisterBlockchain(blockchain)

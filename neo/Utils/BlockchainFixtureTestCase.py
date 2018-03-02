@@ -12,8 +12,8 @@ import logzero
 
 class BlockchainFixtureTestCase(NeoTestCase):
 
-    FIXTURE_REMOTE_LOC = 'https://s3.us-east-2.amazonaws.com/cityofzion/fixtures/fixtures_v4.tar.gz'
-    FIXTURE_FILENAME = './Chains/fixtures_v4.tar.gz'
+    FIXTURE_REMOTE_LOC = 'https://s3.us-east-2.amazonaws.com/cityofzion/fixtures/fixtures_v5.tar.gz'
+    FIXTURE_FILENAME = './Chains/fixtures_v5.tar.gz'
     _blockchain = None
 
     @classmethod
@@ -46,7 +46,7 @@ class BlockchainFixtureTestCase(NeoTestCase):
             raise Exception("Could not extract tar file - %s. You may want need to remove the fixtures file %s manually to fix this." % (e, cls.FIXTURE_FILENAME))
 
         if not os.path.exists(cls.leveldb_testpath()):
-            raise Exception("Error downloading fixtures")
+            raise Exception("Error downloading fixtures at %s %s" % (os.getcwd(), cls.leveldb_testpath()))
 
         cls._blockchain = TestLevelDBBlockchain(path=cls.leveldb_testpath())
         Blockchain.RegisterBlockchain(cls._blockchain)

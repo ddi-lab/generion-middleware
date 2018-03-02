@@ -31,9 +31,12 @@ from neo.Settings import settings
 from neo.Core.Helper import Helper
 from neo.Core.Blockchain import Blockchain
 from neo.EventHub import events
+from logzero import logger
 
 from neo.VM.OpCode import *
 import json
+
+DEFAULT_MIN_FEE = Fixed8.FromDecimal(.0001)
 
 
 def InvokeContract(wallet, tx, fee=Fixed8.Zero()):
@@ -114,16 +117,14 @@ def InvokeWithTokenVerificationScript(wallet, tx, token, fee=Fixed8.Zero()):
 #            toarray = Helper.ToArray(wallet_tx)
 #            print("to arary %s " % toarray)
 
-            # check if we can save the tx first
-            save_tx = wallet.SaveTransaction(wallet_tx)
-
-            if save_tx:
-                relayed = NodeLeader.Instance().Relay(wallet_tx)
-            else:
-                print("Could not save tx to wallet, will not send tx")
+            relayed = NodeLeader.Instance().Relay(wallet_tx)
 
             if relayed:
                 print("Relayed Tx: %s " % wallet_tx.Hash.ToString())
+
+                # if it was relayed, we save tx
+                wallet.SaveTransaction(wallet_tx)
+
                 return wallet_tx
             else:
                 print("Could not relay tx %s " % wallet_tx.Hash.ToString())
@@ -137,7 +138,7 @@ def InvokeWithTokenVerificationScript(wallet, tx, token, fee=Fixed8.Zero()):
     return False
 
 
-def TestInvokeContract(wallet, args, withdrawal_tx=None, parse_params=True, from_addr=None):
+def TestInvokeContract(wallet, args, withdrawal_tx=None, parse_params=True, from_addr=None, min_fee=DEFAULT_MIN_FEE):
 
     BC = GetBlockchain()
 
@@ -203,7 +204,7 @@ def TestInvokeContract(wallet, args, withdrawal_tx=None, parse_params=True, from
 
             outputs.append(output)
 
-        return test_invoke(out, wallet, outputs, withdrawal_tx)
+        return test_invoke(out, wallet, outputs, withdrawal_tx, min_fee=min_fee)
 
     else:
 
@@ -212,9 +213,9 @@ def TestInvokeContract(wallet, args, withdrawal_tx=None, parse_params=True, from
     return None, None, None, None
 
 
-def test_invoke(script, wallet, outputs, withdrawal_tx=None, from_addr=None):
+def test_invoke(script, wallet, outputs, withdrawal_tx=None, from_addr=None, min_fee=DEFAULT_MIN_FEE):
 
-    #    print("invoke script %s " % script)
+    # print("invoke script %s " % script)
 
     bc = GetBlockchain()
 
@@ -246,7 +247,7 @@ def test_invoke(script, wallet, outputs, withdrawal_tx=None, from_addr=None):
 
     if len(outputs) < 1:
         contract = wallet.GetDefaultContract()
-        tx.Attributes = [TransactionAttribute(usage=TransactionAttributeUsage.Script, data=Crypto.ToScriptHash(contract.Script).Data)]
+        tx.Attributes = [TransactionAttribute(usage=TransactionAttributeUsage.Script, data=Crypto.ToScriptHash(contract.Script, unhex=False).Data)]
 
     # same as above. we don't want to re-make the transaction if it is a withdrawal tx
     if withdrawal_tx is not None:
@@ -296,8 +297,8 @@ def test_invoke(script, wallet, outputs, withdrawal_tx=None, from_addr=None):
             net_fee = None
             tx_gas = None
 
-            if consumed < Fixed8.Zero():
-                net_fee = Fixed8.FromDecimal(.001)
+            if consumed <= Fixed8.Zero():
+                net_fee = min_fee
                 tx_gas = Fixed8.Zero()
             else:
                 tx_gas = consumed
@@ -318,7 +319,7 @@ def test_invoke(script, wallet, outputs, withdrawal_tx=None, from_addr=None):
     return None, None, None, None
 
 
-def test_deploy_and_invoke(deploy_script, invoke_args, wallet):
+def test_deploy_and_invoke(deploy_script, invoke_args, wallet, min_fee=DEFAULT_MIN_FEE):
 
     bc = GetBlockchain()
 
@@ -352,7 +353,7 @@ def test_deploy_and_invoke(deploy_script, invoke_args, wallet):
     service = StateMachine(accounts, validators, assets, contracts, storages, None)
 
     contract = wallet.GetDefaultContract()
-    dtx.Attributes = [TransactionAttribute(usage=TransactionAttributeUsage.Script, data=Crypto.ToScriptHash(contract.Script))]
+    dtx.Attributes = [TransactionAttribute(usage=TransactionAttributeUsage.Script, data=Crypto.ToScriptHash(contract.Script, unhex=False))]
 
     to_dispatch = []
 
@@ -370,140 +371,138 @@ def test_deploy_and_invoke(deploy_script, invoke_args, wallet):
     # first we will execute the test deploy
     # then right after, we execute the test invoke
 
-    try:
-        d_success = engine.Execute()
+    d_success = engine.Execute()
 
-        if d_success:
+    if d_success:
 
-            items = engine.EvaluationStack.Items
+        items = engine.EvaluationStack.Items
 
-            contract_state = None
-            for i in items:
-                if type(i) is ContractState:
-                    contract_state = i
+        contract_state = None
+        for i in items:
+            if type(i) is ContractState:
+                contract_state = i
+                break
+            elif type(i) is InteropInterface:
+                item = i.GetInterface()
+                if type(item) is ContractState:
+                    contract_state = item
                     break
-                elif type(i) is InteropInterface:
-                    item = i.GetInterface()
-                    if type(item) is ContractState:
-                        contract_state = item
-                        break
 
-            shash = contract_state.Code.ScriptHash()
+        shash = contract_state.Code.ScriptHash()
 
-            invoke_args, neo_to_attach, gas_to_attach = get_asset_attachments(invoke_args)
+        invoke_args, neo_to_attach, gas_to_attach = get_asset_attachments(invoke_args)
 
-            invoke_args.reverse()
+        invoke_args.reverse()
 
-            sb = ScriptBuilder()
+        # print("neo, gas %s %s " % (neo_to_attach,gas_to_attach.ToString()))
 
-            # print("neo, gas %s %s " % (neo_to_attach,gas_to_attach.ToString()))
+        sb = ScriptBuilder()
 
-            sb = ScriptBuilder()
+        for p in invoke_args:
 
-            for p in invoke_args:
+            item = parse_param(p, wallet)
 
-                item = parse_param(p, wallet)
+            if type(item) is list:
+                item.reverse()
+                listlength = len(item)
+                for listitem in item:
+                    subitem = parse_param(listitem, wallet)
+                    sb.push(subitem)
+                sb.push(listlength)
+                sb.Emit(PACK)
+            else:
+                sb.push(item)
 
-                if type(item) is list:
-                    item.reverse()
-                    listlength = len(item)
-                    for listitem in item:
-                        sb.push(listitem)
-                    sb.push(listlength)
-                    sb.Emit(PACK)
-                else:
-                    sb.push(item)
+        sb.EmitAppCall(shash.Data)
+        out = sb.ToArray()
 
-            sb.EmitAppCall(shash.Data)
-            out = sb.ToArray()
+        outputs = []
 
-            outputs = []
+        if neo_to_attach:
+            output = TransactionOutput(AssetId=Blockchain.SystemShare().Hash,
+                                       Value=neo_to_attach,
+                                       script_hash=contract_state.Code.ScriptHash(),
+                                       )
+            outputs.append(output)
 
-            if neo_to_attach:
-                output = TransactionOutput(AssetId=Blockchain.SystemShare().Hash,
-                                           Value=neo_to_attach,
-                                           script_hash=contract_state.Code.ScriptHash(),
-                                           )
-                outputs.append(output)
+        if gas_to_attach:
+            output = TransactionOutput(AssetId=Blockchain.SystemCoin().Hash,
+                                       Value=gas_to_attach,
+                                       script_hash=contract_state.Code.ScriptHash())
 
-            if gas_to_attach:
-                output = TransactionOutput(AssetId=Blockchain.SystemCoin().Hash,
-                                           Value=gas_to_attach,
-                                           script_hash=contract_state.Code.ScriptHash())
+            outputs.append(output)
 
-                outputs.append(output)
+        itx = InvocationTransaction()
+        itx.Version = 1
+        itx.outputs = outputs
+        itx.inputs = []
+        itx.scripts = []
+        itx.Attributes = []
+        itx.Script = binascii.unhexlify(out)
 
-            itx = InvocationTransaction()
-            itx.Version = 1
-            itx.outputs = outputs
-            itx.inputs = []
-            itx.scripts = []
-            itx.Attributes = []
-            itx.Script = binascii.unhexlify(out)
+        if len(outputs) < 1:
+            contract = wallet.GetDefaultContract()
+            itx.Attributes = [TransactionAttribute(usage=TransactionAttributeUsage.Script,
+                                                   data=Crypto.ToScriptHash(contract.Script, unhex=False).Data)]
 
-            if len(outputs) < 1:
-                contract = wallet.GetDefaultContract()
-                itx.Attributes = [TransactionAttribute(usage=TransactionAttributeUsage.Script,
-                                                       data=Crypto.ToScriptHash(contract.Script).Data)]
-
-            itx = wallet.MakeTransaction(tx=itx)
-            context = ContractParametersContext(itx)
-            wallet.Sign(context)
-            itx.scripts = context.GetScripts()
+        itx = wallet.MakeTransaction(tx=itx)
+        context = ContractParametersContext(itx)
+        wallet.Sign(context)
+        itx.scripts = context.GetScripts()
 
 #            print("tx: %s " % json.dumps(itx.ToJson(), indent=4))
 
-            engine = ApplicationEngine(
-                trigger_type=TriggerType.Application,
-                container=itx,
-                table=script_table,
-                service=service,
-                gas=itx.Gas,
-                testMode=True
-            )
+        engine = ApplicationEngine(
+            trigger_type=TriggerType.Application,
+            container=itx,
+            table=script_table,
+            service=service,
+            gas=itx.Gas,
+            testMode=True
+        )
 
-            engine.LoadScript(itx.Script, False)
+        engine.LoadScript(itx.Script, False)
 
-            i_success = engine.Execute()
+        i_success = engine.Execute()
 
-            service.ExecutionCompleted(engine, i_success)
-            to_dispatch = to_dispatch + service.events_to_dispatch
+        service.ExecutionCompleted(engine, i_success)
+        to_dispatch = to_dispatch + service.events_to_dispatch
 
-            for event in to_dispatch:
-                events.emit(event.event_type, event)
+        for event in to_dispatch:
+            events.emit(event.event_type, event)
 
-            if i_success:
-                service.TestCommit()
+        if i_success:
+            service.TestCommit()
+            if len(service.notifications) > 0:
 
-                if len(service.notifications) > 0:
-                    for n in service.notifications:
-                        Blockchain.Default().OnNotify(n)
+                for n in service.notifications:
+                    #                        print("NOTIFICATION : %s " % n)
+                    Blockchain.Default().OnNotify(n)
 
-                print("Used %s Gas " % engine.GasConsumed().ToString())
+            logger.info("Used %s Gas " % engine.GasConsumed().ToString())
 
-                consumed = engine.GasConsumed() - Fixed8.FromDecimal(10)
-                consumed.value = int(consumed.value)
+            consumed = engine.GasConsumed() - Fixed8.FromDecimal(10)
+            consumed = consumed.Ceil()
 
-                if consumed < Fixed8.One():
-                    consumed = Fixed8.FromDecimal(.001)
+            if consumed <= Fixed8.Zero():
+                consumed = min_fee
 
-                total_ops = engine.ops_processed
+            total_ops = engine.ops_processed
 
-                # set the amount of gas the tx will need
-                itx.Gas = consumed
-                itx.Attributes = []
-                result = engine.ResultsForCode(contract_state.Code)
-                return itx, result, total_ops
-            else:
-                print("error executing invoke contract...")
-
+            # set the amount of gas the tx will need
+            itx.Gas = consumed
+            itx.Attributes = []
+            result = engine.EvaluationStack.Items
+            return itx, result, total_ops, engine
         else:
-            print("error executing deploy contract.....")
+            print("error executing invoke contract...")
 
-    except Exception as e:
-        service.ExecutionCompleted(engine, False, e)
+    else:
+        print("error executing deploy contract.....")
 
-    return None, [], 0
+    service.ExecutionCompleted(engine, False, 'error')
+
+    return None, [], 0, None
 
 
 def descripe_contract(contract):

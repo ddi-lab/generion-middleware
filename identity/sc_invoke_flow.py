@@ -14,6 +14,7 @@ from neo.Core.TX.Transaction import TransactionOutput
 from neo.VM.InteropService import stack_item_to_py
 from neo.VM.ScriptBuilder import ScriptBuilder
 from neo.Blockchain import GetBlockchain
+from neo.Wallets.utils import to_aes_key
 from neo.contrib.smartcontract import SmartContract
 from neocore.Fixed8 import Fixed8
 
@@ -45,7 +46,7 @@ class IdentitySmartContract():
 
         self.contract_hash = contract_hash
         self.wallet_path = wallet_path
-        self.wallet_pass = wallet_pass
+        self.wallet_pass = to_aes_key(wallet_pass)
         self.wallet_mutex = threading.Lock()
 
         self.smart_contract = SmartContract(contract_hash)
