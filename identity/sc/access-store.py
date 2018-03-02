@@ -1,5 +1,5 @@
 """
-Identity Smart Contract
+Identity Smart Contract (neo-boa==0.3.3)
 ===================================
 Testing:
 
@@ -27,21 +27,21 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 setUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT", "PUB_KEY"]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getUserList []
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 createRecord ["AG92fB2ZM7wnRXcxp7sn5CWiNVkJmXYwy6","AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 verifyRecord [1]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getRecord [1]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 deleteRecord [1]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getOrderList []
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getOrderIdList []
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 getOrder [1]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 deleteOrder [1]
-neo> testinvoke 0743b0887b29484a78fc8568c1d146f6c8cd4252 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 setUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT", "PUB_KEY"]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getUserList []
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 createRecord ["AG92fB2ZM7wnRXcxp7sn5CWiNVkJmXYwy6","AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 verifyRecord [1]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getRecord [1]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 deleteRecord [1]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getOrderList []
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getOrderIdList []
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getOrder [1]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 deleteOrder [1]
+neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.interop.Neo.Runtime import Log, Notify
@@ -512,8 +512,9 @@ def PurchaseData(order_id, pub_key):
     receiver_addr = GetExecutingScriptHash()
     received_NEO = 0
     for output in tx.Outputs:
-        if output.ScriptHash == receiver_addr and output.AssetId == NEO_ASSET_ID:
-            received_NEO += output.Value
+        if output.ScriptHash == receiver_addr:
+            if output.AssetId == NEO_ASSET_ID:
+                received_NEO += output.Value
     received_NEO /= 100000000
 
     Log("Received total NEO:")
@@ -567,42 +568,34 @@ def check_permission(usr_adr):
 def deserialize_bytearray(data):
 
     # ok this is weird.  if you remove this print statement, it stops working :/
-    print("deserializing data...")
 
     # get length of length
-    collection_length_length = substr(data, 0, 1)
+    collection_length_length = data[0:1]
 
     # get length of collection
-    collection_len = substr(data, 1, collection_length_length)
+    collection_len = data[1:collection_length_length + 1]
 
     # create a new collection
     new_collection = list(length=collection_len)
 
-    # calculate offset
-    offset = 1 + collection_length_length
-
     # trim the length data
-    newdata = data[offset:]
+    offset = 1 + collection_length_length
 
     for i in range(0, collection_len):
 
         # get the data length length
-        itemlen_len = substr(newdata, 0, 1)
+        itemlen_len = data[offset:offset + 1]
 
         # get the length of the data
-        item_len = substr(newdata, 1, itemlen_len)
-
-        start = 1 + itemlen_len
-        end = start + item_len
+        item_len = data[offset + 1:offset + 1 + itemlen_len]
 
         # get the data
-        item = substr(newdata, start, item_len)
+        item = data[offset + 1 + itemlen_len: offset + 1 + itemlen_len + item_len]
 
         # store it in collection
         new_collection[i] = item
 
-        # trim the data
-        newdata = newdata[end:]
+        offset = offset + item_len + itemlen_len + 1
 
     return new_collection
 

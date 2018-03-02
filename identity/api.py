@@ -50,7 +50,7 @@ API_PORT = os.getenv("IIDENTITY_API_PORT", "8090")
 PROTOCOL_CONFIG = os.path.join(parent_dir, "protocol.privnet.json")
 WALLET_FILE = os.getenv("IDENTITY_WALLET_FILE", os.path.join(parent_dir, "identity-wallets/neo-privnet.wallet"))
 WALLET_PWD = os.getenv("IDENTITY_WALLET_PWD", "coz")
-CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "0743b0887b29484a78fc8568c1d146f6c8cd4252")
+CONTRACT_HASH = os.getenv("IDENTITY_SC_HASH", "6338d6702c728e13ebaad01c5eb89d2b0806e509")
 
 print(PROTOCOL_CONFIG, API_PORT, CONTRACT_HASH, WALLET_FILE, WALLET_PWD)
 
