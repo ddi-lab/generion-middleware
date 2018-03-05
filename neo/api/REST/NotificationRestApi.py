@@ -1,6 +1,4 @@
 """
-
-
 The REST API is using the Python package 'klein', which makes it possible to
 create HTTP routes and handlers with Twisted in a similar style to Flask:
 https://github.com/twisted/klein
@@ -8,18 +6,25 @@ https://github.com/twisted/klein
 """
 import json
 from klein import Klein
-from neo.Implementations.Notifications.LevelDB.NotificationDB import NotificationDB
 from logzero import logger
+
+from neo.Network.NodeLeader import NodeLeader
+from neo.Implementations.Notifications.LevelDB.NotificationDB import NotificationDB
 from neo.Core.Blockchain import Blockchain
+from neocore.UInt160 import UInt160
+from neocore.UInt256 import UInt256
+from neo.Settings import settings
+from neo.api.utils import cors_header
+
+
+API_URL_PREFIX = "/v1"
 
 
 class NotificationRestApi(object):
     app = Klein()
-
     notif = None
 
     def __init__(self):
-
         self.notif = NotificationDB.instance()
 
     #
@@ -27,24 +32,36 @@ class NotificationRestApi(object):
     #
     @app.route('/')
     def home(self, request):
+        endpoints_html = """<ul>
+            <li><pre>{apiPrefix}/notifications/block/&lt;height&gt;</pre> <em>notifications by block</em></li>
+            <li><pre>{apiPrefix}/notifications/addr/&lt;addr&gt;</pre><em>notifications by address</em></li>
+            <li><pre>{apiPrefix}/notifications/tx/&lt;hash&gt;</pre><em>notifications by tx</em></li>
+            <li><pre>{apiPrefix}/notifications/contract/&lt;hash&gt;</pre><em>notifications by contract</em></li>
+            <li><pre>{apiPrefix}/tokens</pre><em>lists all NEP5 Tokens</em></li>
+            <li><pre>{apiPrefix}/token/&lt;contract_hash&gt;</pre><em>list an NEP5 Token</em></li>
+            <li><pre>{apiPrefix}/status</pre> <em>current block height and version</em></li>
+        </ul>
+        """.format(apiPrefix=API_URL_PREFIX)
 
         return """<html>
                     <style>body {padding:20px;max-width:800px;pre { background-color:#eee; }</style>
                     <body>
-                        <h2>endpoints:</h2>
                         <p>
-                            <ul>
-                                <li><pre>/block/{height}</pre></li>
-                                <li><pre>/addr/{addr}</pre></li>
-                                <li><pre>/tx/{hash}</pre></li>
-                            </ul>
+                            <h2>REST API for NEO %s</h2>
+                            (see also <a href="https://github.com/CityOfZion/neo-python">neo-python</a>, <a href="https://github.com/CityOfZion/neo-python/blob/development/api-server.py">api-server.py</a>)
                         </p>
+
+                        <hr/>
+
+                        <h2>endpoints:</h2>
+                        <p>%s</p>
                         <div>
                             <hr/>
                             <h3>pagination</h3>
-                            <p>results are offered in page size of 1000</p>
+                            <p>results are offered in page size of 500</p>
                             <p>you may request a different page by specifying the <code>page</code> query string param, for example:</p>
                             <pre>/block/123456?page=3</pre>
+                            <p>page index starts at 0, so the 2nd page would be <code>?page=1</code></p>
                             <hr/>
                             <h3>sample output</h3>
                             <pre>
@@ -99,9 +116,10 @@ class NotificationRestApi(object):
 }</pre>
                         </div>
                     </body>
-                </html>"""
+                </html>""" % (settings.net_name, endpoints_html)
 
-    @app.route('/block/<int:block>', methods=['GET'])
+    @app.route('%s/notifications/block/<int:block>' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
     def get_by_block(self, request, block):
         request.setHeader('Content-Type', 'application/json')
         try:
@@ -111,7 +129,8 @@ class NotificationRestApi(object):
             return self.format_message("Could not get notifications for block %s because %s " % (block, e))
         return self.format_notifications(request, notifications)
 
-    @app.route('/addr/<string:address>', methods=['GET'])
+    @app.route('%s/addr/<string:address>' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
     def get_by_addr(self, request, address):
         request.setHeader('Content-Type', 'application/json')
         try:
@@ -121,18 +140,17 @@ class NotificationRestApi(object):
             return self.format_message("Could not get notifications for address %s because %s" % (address, e))
         return self.format_notifications(request, notifications)
 
-    @app.route('/tx/<string:tx_hash>', methods=['GET'])
+    @app.route('%s/tx/<string:tx_hash>' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
     def get_by_tx(self, request, tx_hash):
         request.setHeader('Content-Type', 'application/json')
 
         bc = Blockchain.Default()  # type: Blockchain
         notifications = []
-
         try:
-            tx, height = bc.GetTransaction(tx_hash)
-
+            hash = UInt256.ParseString(tx_hash)
+            tx, height = bc.GetTransaction(hash)
             block_notifications = self.notif.get_by_block(height - 1)
-
             for n in block_notifications:
                 if n.tx_hash == tx.Hash:
                     notifications.append(n)
@@ -142,10 +160,54 @@ class NotificationRestApi(object):
 
         return self.format_notifications(request, notifications)
 
-    def format_notifications(self, request, notifications):
+    @app.route('%s/contract/<string:contract_hash>' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
+    def get_by_contract(self, request, contract_hash):
+        request.setHeader('Content-Type', 'application/json')
+        try:
+            hash = UInt160.ParseString(contract_hash)
+            notifications = self.notif.get_by_contract(hash)
+        except Exception as e:
+            logger.info("Could not get notifications for contract %s " % contract_hash)
+            return self.format_message("Could not get notifications for contract hash %s because %s" % (contract_hash, e))
+        return self.format_notifications(request, notifications)
 
+    @app.route('%s/tokens' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
+    def get_tokens(self, request):
+        request.setHeader('Content-Type', 'application/json')
+        notifications = self.notif.get_tokens()
+        return self.format_notifications(request, notifications)
+
+    @app.route('%s/token/<string:contract_hash>' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
+    def get_token(self, request, contract_hash):
+        request.setHeader('Content-Type', 'application/json')
+        try:
+            uint160 = UInt160.ParseString(contract_hash)
+            contract_event = self.notif.get_token(uint160)
+            if not contract_event:
+                return self.format_message("Could not find contract with hash %s" % contract_hash)
+            notifications = [contract_event]
+        except Exception as e:
+            logger.info("Could not get contract with hash %s because %s " % (contract_hash, e))
+            return self.format_message("Could not get contract with hash %s because %s " % (contract_hash, e))
+
+        return self.format_notifications(request, notifications)
+
+    @app.route('%s/status' % API_URL_PREFIX, methods=['GET'])
+    @cors_header
+    def get_status(self, request):
+        request.setHeader('Content-Type', 'application/json')
+        return json.dumps({
+            'current_height': Blockchain.Default().Height,
+            'version': settings.VERSION_NAME,
+            'num_peers': len(NodeLeader.Instance().Peers)
+        }, indent=4, sort_keys=True)
+
+    def format_notifications(self, request, notifications):
         notif_len = len(notifications)
-        page_len = 1000
+        page_len = 500
         page = 0
         message = ''
         if b'page' in request.args:

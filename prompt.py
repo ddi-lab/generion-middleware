@@ -20,6 +20,7 @@ from neo import __version__
 from neo.Core.Blockchain import Blockchain
 from neocore.Fixed8 import Fixed8
 from neo.IO.MemoryStream import StreamManager
+from neo.Wallets.utils import to_aes_key
 from neo.Implementations.Blockchains.LevelDB.LevelDBBlockchain import LevelDBBlockchain
 from neo.Implementations.Blockchains.LevelDB.DebugStorage import DebugStorage
 from neo.Implementations.Wallets.peewee.UserWallet import UserWallet
@@ -37,9 +38,11 @@ from neo.Prompt.Commands.Tokens import token_approve_allowance, token_get_allowa
 from neo.Prompt.Commands.Wallet import DeleteAddress, ImportWatchAddr, ImportToken, ClaimGas, DeleteToken, AddAlias, \
     ShowUnspentCoins
 from neo.Prompt.Utils import get_arg
+from neo.Prompt.InputParser import InputParser
 from neo.Settings import settings, DIR_PROJECT_ROOT
 from neo.UserPreferences import preferences
 from neocore.KeyPair import KeyPair
+from neocore.UInt256 import UInt256
 
 # Logfile settings & setup
 LOGFILE_FN = os.path.join(DIR_PROJECT_ROOT, 'prompt.log')
@@ -97,19 +100,19 @@ class PromptInterface(object):
                 'wallet tkn_send_from {token symbol} {address_from} {address to} {amount}',
                 'wallet tkn_approve {token symbol} {address_from} {address to} {amount}',
                 'wallet tkn_allowance {token symbol} {address_from} {address to}',
-                'wallet tkn_mint {token symbol} {mint_to_addr} {amount_attach_neo} {amount_attach_gas}',
+                'wallet tkn_mint {token symbol} {mint_to_addr} (--attach-neo={amount}, --attach-gas={amount})',
                 'wallet unspent',
                 'wallet close',
                 'withdraw_request {asset_name} {contract_hash} {to_addr} {amount}',
                 'withdraw holds # lists all current holds',
                 'withdraw completed # lists completed holds eligible for cleanup',
                 'withdraw cancel # cancels current holds',
-                'witdraw cleanup # cleans up completed holds',
+                'withdraw cleanup # cleans up completed holds',
                 'withdraw # withdraws the first hold availabe',
                 'withdraw all # withdraw all holds available',
                 'send {assetId or name} {address} {amount} (--from-addr={addr})',
                 'sign {transaction in JSON format}',
-                'testinvoke {contract hash} {params} (--attach-neo={amount}, --attach-gas={amount)',
+                'testinvoke {contract hash} {params} (--attach-neo={amount}, --attach-gas={amount})',
                 'debugstorage {on/off/reset}'
                 ]
 
@@ -120,6 +123,7 @@ class PromptInterface(object):
     start_dt = None
 
     def __init__(self):
+        self.input_parser = InputParser()
         self.start_height = Blockchain.Default().Height
         self.start_dt = datetime.datetime.utcnow()
 
@@ -172,10 +176,8 @@ class PromptInterface(object):
     def quit(self):
         print('Shutting down. This may take a bit...')
         self.go_on = False
-        NotificationDB.close()
-        Blockchain.Default().Dispose()
+        self.do_close_wallet()
         reactor.stop()
-        NodeLeader.Instance().Shutdown()
 
     def help(self):
         tokens = []
@@ -200,9 +202,10 @@ class PromptInterface(object):
                     return
 
                 passwd = prompt("[password]> ", is_password=True)
+                password_key = to_aes_key(passwd)
 
                 try:
-                    self.Wallet = UserWallet.Open(path, passwd)
+                    self.Wallet = UserWallet.Open(path, password_key)
 
                     self._walletdb_loop = task.LoopingCall(self.Wallet.ProcessBlocks)
                     self._walletdb_loop.start(1)
@@ -235,8 +238,11 @@ class PromptInterface(object):
                     print("Please provide matching passwords that are at least 10 characters long")
                     return
 
+                password_key = to_aes_key(passwd1)
+
                 try:
-                    self.Wallet = UserWallet.Create(path=path, password=passwd1)
+                    self.Wallet = UserWallet.Create(path=path,
+                                                    password=password_key)
                     contract = self.Wallet.GetDefaultContract()
                     key = self.Wallet.GetKey(contract.PublicKeyHash)
                     print("Wallet %s" % json.dumps(self.Wallet.ToJson(), indent=4))
@@ -251,8 +257,9 @@ class PromptInterface(object):
                             print("Could not remove {}: {}".format(path, e))
                     return
 
-                self._walletdb_loop = task.LoopingCall(self.Wallet.ProcessBlocks)
-                self._walletdb_loop.start(1)
+                if self.Wallet:
+                    self._walletdb_loop = task.LoopingCall(self.Wallet.ProcessBlocks)
+                    self._walletdb_loop.start(1)
 
             else:
                 print("Please specify a path")
@@ -591,19 +598,19 @@ class PromptInterface(object):
             print("Please specify a header")
 
     def show_tx(self, args):
-        item = get_arg(args)
-        if item is not None:
+        if len(args):
             try:
-                tx, height = Blockchain.Default().GetTransaction(item)
+                txid = UInt256.ParseString(get_arg(args))
+                tx, height = Blockchain.Default().GetTransaction(txid)
                 if height > -1:
-                    bjson = json.dumps(tx.ToJson(), indent=4)
-                    tokens = [(Token.Command, bjson)]
+                    jsn = tx.ToJson()
+                    jsn['height'] = height
+                    jsn['unspents'] = [uns.ToJson(tx.outputs.index(uns)) for uns in Blockchain.Default().GetAllUnspent(txid)]
+                    tokens = [(Token.Command, json.dumps(jsn, indent=4))]
                     print_tokens(tokens, self.token_style)
                     print('\n')
             except Exception as e:
-                print("Could not find transaction with id %s" % item)
-                print(
-                    "Please specify a TX hash like 'db55b4d97cf99db6826967ef4318c2993852dff3e79ec446103f141c716227f6'")
+                print("Could not find transaction from args: %s (%s)" % (e, args))
         else:
             print("Please specify a TX hash")
 
@@ -677,7 +684,9 @@ class PromptInterface(object):
                 contract = Blockchain.Default().GetContract(item)
 
                 if contract is not None:
-                    bjson = json.dumps(contract.ToJson(), indent=4)
+                    contract.DetermineIsNEP5()
+                    jsn = contract.ToJson()
+                    bjson = json.dumps(jsn, indent=4)
                     tokens = [(Token.Number, bjson)]
                     print_tokens(tokens, self.token_style)
                     print('\n')
@@ -736,10 +745,14 @@ class PromptInterface(object):
                     print(
                         "\n-------------------------------------------------------------------------------------------------------------------------------------")
                     print("Test deploy invoke successful")
-                    print("Total operations executed: %s" % num_ops)
-                    print("Results %s " % [str(item) for item in results])
-                    print("Deploy Invoke TX GAS cost: %s" % (tx.Gas.value / Fixed8.D))
-                    print("Deploy Invoke TX fee: %s" % (fee.value / Fixed8.D))
+                    print("Total operations executed: %s " % num_ops)
+                    print("Results:")
+                    print("\t(Raw) %s" % [str(item) for item in results])
+                    #print("\t(Int) %s" % [item.GetBigInteger() for item in results])
+                    print("\t(Str) %s" % [item.GetString() for item in results])
+                    print("\t(Bool) %s" % [item.GetBoolean() for item in results])
+                    print("Deploy Invoke TX GAS cost: %s " % (tx.Gas.value / Fixed8.D))
+                    print("Deploy Invoke TX Fee: %s " % (fee.value / Fixed8.D))
                     print(
                         "-------------------------------------------------------------------------------------------------------------------------------------\n")
                     print("Enter your password to continue and deploy this contract")
@@ -811,12 +824,6 @@ class PromptInterface(object):
         else:
             print("Cannot configure %s try 'config sc-events on|off' or 'config debug on|off'", what)
 
-    def parse_result(self, result):
-        if len(result):
-            command_parts = [s for s in result.split()]
-            return command_parts[0], command_parts[1:]
-        return None, None
-
     def run(self):
         dbloop = task.LoopingCall(Blockchain.Default().PersistBlocks)
         dbloop.start(.1)
@@ -847,7 +854,7 @@ class PromptInterface(object):
                 continue
 
             try:
-                command, arguments = self.parse_result(result)
+                command, arguments = self.input_parser.parse_input(result)
 
                 if command is not None and len(command) > 0:
                     command = command.lower()
@@ -918,11 +925,16 @@ class PromptInterface(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--mainnet", action="store_true", default=False,
-                        help="Use MainNet instead of the default TestNet")
-    parser.add_argument("-p", "--privnet", action="store_true", default=False,
-                        help="Use PrivNet instead of the default TestNet")
-    parser.add_argument("-c", "--config", action="store", help="Use a specific config file")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-m", "--mainnet", action="store_true", default=False,
+                       help="Use MainNet instead of the default TestNet")
+    group.add_argument("-p", "--privnet", action="store_true", default=False,
+                       help="Use PrivNet instead of the default TestNet")
+    group.add_argument("--coznet", action="store_true", default=False,
+                       help="Use the CoZ network instead of the default TestNet")
+    group.add_argument("-c", "--config", action="store", help="Use a specific config file")
+
     parser.add_argument("-t", "--set-default-theme", dest="theme",
                         choices=["dark", "light"],
                         help="Set the default theme to be loaded from the config file. Default: 'dark'")
@@ -931,13 +943,6 @@ def main():
 
     args = parser.parse_args()
 
-    if args.config and (args.mainnet or args.privnet):
-        print("Cannot use --config and --mainnet/--privnet together, please use only one")
-        exit(1)
-    if args.mainnet and args.privnet:
-        print("Cannot use --mainnet and --privnet together")
-        exit(1)
-
     # Setup depending on command line arguments. By default, the testnet settings are already loaded.
     if args.config:
         settings.setup(args.config)
@@ -945,6 +950,8 @@ def main():
         settings.setup_mainnet()
     elif args.privnet:
         settings.setup_privnet()
+    elif args.coznet:
+        settings.setup_coznet()
 
     if args.theme:
         preferences.set_theme(args.theme)
@@ -960,11 +967,18 @@ def main():
     # Start the prompt interface
     cli = PromptInterface()
 
-    # Run
+    # Run things
     reactor.suggestThreadPoolSize(15)
     reactor.callInThread(cli.run)
     NodeLeader.Instance().Start()
+
+    # reactor.run() is blocking, until `quit()` is called which stops the reactor.
     reactor.run()
+
+    # After the reactor is stopped, gracefully shutdown the database.
+    NotificationDB.close()
+    Blockchain.Default().Dispose()
+    NodeLeader.Instance().Shutdown()
 
 
 if __name__ == "__main__":

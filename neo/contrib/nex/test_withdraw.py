@@ -1,4 +1,5 @@
 from neo.Utils.WalletFixtureTestCase import WalletFixtureTestCase
+from neo.Wallets.utils import to_aes_key
 from neo.Implementations.Wallets.peewee.UserWallet import UserWallet
 from neo.Core.Blockchain import Blockchain
 from neo.Core.TX.InvocationTransaction import InvocationTransaction
@@ -69,13 +70,15 @@ class WithdrawWalletTestCase(WalletFixtureTestCase):
     @classmethod
     def GetWallet1(cls, recreate=False):
         if cls._wallet1 is None or recreate:
-            cls._wallet1 = UserWallet.Open(WithdrawWalletTestCase.wallet_1_dest(), WithdrawWalletTestCase.wallet_1_pass())
+            cls._wallet1 = UserWallet.Open(WithdrawWalletTestCase.wallet_1_dest(),
+                                           to_aes_key(WithdrawWalletTestCase.wallet_1_pass()))
         return cls._wallet1
 
     @classmethod
     def GetWallet2(cls, recreate=False):
         if cls._wallet2 is None or recreate:
-            cls._wallet2 = UserWallet.Open(WithdrawWalletTestCase.wallet_2_dest(), WithdrawWalletTestCase.wallet_2_pass())
+            cls._wallet2 = UserWallet.Open(WithdrawWalletTestCase.wallet_2_dest(),
+                                           to_aes_key(WithdrawWalletTestCase.wallet_2_pass()))
         return cls._wallet2
 
     def test_1_initial_setup(self):
@@ -130,7 +133,7 @@ class WithdrawWalletTestCase(WalletFixtureTestCase):
 
         self.assertIsInstance(res2, InvocationTransaction)
 
-        self.assertEqual(res2.Hash.ToString(), '828a161d718890c7de29527f5c8c705cba1abb17bc627f76681800e78a49e200')
+        self.assertEqual(res2.Hash.ToString(), '5f3e82e6472f4897071cec91f50cd71a5e006a1221385763d4bfbdf7d7d16be2')
 
     def test_4_withdraw_one(self):
 
@@ -158,7 +161,7 @@ class WithdrawWalletTestCase(WalletFixtureTestCase):
 
         self.assertIsInstance(res, InvocationTransaction)
 
-        self.assertEqual(res.Hash.ToString(), 'aa27a2331631e7594517fed5f6388e6f3e2567a7854b4d98901c818d9f20d03e')
+        self.assertEqual(res.Hash.ToString(), '24708397bf6a54df7f2161348a399dca24082fd00d564bf21fa2cb18ff1efbe5')
 
     def test_7_delete_holds(self):
 

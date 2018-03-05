@@ -30,6 +30,7 @@ from neocore.Fixed8 import Fixed8
 from neocore.UInt160 import UInt160
 from neocore.UInt256 import UInt256
 from neo.Core.Helper import Helper
+from neo.Wallets.utils import to_aes_key
 
 
 class Wallet(object):
@@ -87,14 +88,16 @@ class Wallet(object):
 
             self.BuildDatabase()
 
-            passwordHash = hashlib.sha256(passwordKey.encode('utf-8')).digest()
-            master = AES.new(passwordHash, AES.MODE_CBC, self._iv)
+            passwordHash = hashlib.sha256(passwordKey).digest()
+            master = AES.new(passwordKey, AES.MODE_CBC, self._iv)
             mk = master.encrypt(self._master_key)
             self.SaveStoredData('PasswordHash', passwordHash)
-            self.SaveStoredData('IV', self._iv),
+            self.SaveStoredData('IV', self._iv)
             self.SaveStoredData('MasterKey', mk)
+            self.SaveStoredData('MigrationState', '1')
 
-            self.SaveStoredData('Height', self._current_height.to_bytes(4, 'little'))
+            self.SaveStoredData('Height',
+                                self._current_height.to_bytes(4, 'little'))
 
         else:
             self.BuildDatabase()
@@ -103,14 +106,19 @@ class Wallet(object):
             if passwordHash is None:
                 raise Exception("Password hash not found in database")
 
-            hkey = hashlib.sha256(passwordKey.encode('utf-8'))
+            hkey = hashlib.sha256(passwordKey).digest()
 
-            if passwordHash is not None and passwordHash != hashlib.sha256(passwordKey.encode('utf-8')).digest():
+            if self.LoadStoredData('MigrationState') != '1':
+                raise Exception("This wallet is currently vulnerable. Please "
+                                "execute the \"reencrypt_wallet.py\" script "
+                                "on this wallet before continuing")
+
+            if passwordHash is not None and passwordHash != hkey:
                 raise Exception("Incorrect Password")
 
             self._iv = self.LoadStoredData('IV')
             master_stored = self.LoadStoredData('MasterKey')
-            aes = AES.new(hkey.digest(), AES.MODE_CBC, self._iv)
+            aes = AES.new(passwordKey, AES.MODE_CBC, self._iv)
             self._master_key = aes.decrypt(master_stored)
 
             self._keys = self.LoadKeyPairs()
@@ -179,17 +187,17 @@ class Wallet(object):
             return
         self._tokens[token.ScriptHash.ToBytes()] = token
 
-    def DeleteNEP5Token(self, token):
+    def DeleteNEP5Token(self, script_hash):
         """
         Delete a NEP5 token from the wallet.
 
         Args:
-            token (NEP5Token): an instance of type neo.Wallets.NEP5Token.
+            token (UInt160): Token Contract script hash
 
         Returns:
             bool: success status.
         """
-        return self._tokens.pop(token.ScriptHash.ToBytes())
+        return self._tokens.pop(script_hash.ToBytes())
 
     def ChangePassword(self, password_old, password_new):
         """
@@ -634,17 +642,20 @@ class Wallet(object):
         # abstract
         pass
 
-    def ProcessBlocks(self):
+    def ProcessBlocks(self, block_limit=1000):
         """
         Method called on a loop to check the current height of the blockchain.  If the height of the blockchain
         is more than the current stored height in the wallet, we get the next block in line and
         processes it.
 
-        In the case that the wallet height is far behind the height of the blockchain, we do this 500
+        In the case that the wallet height is far behind the height of the blockchain, we do this 1000
         blocks at a time.
+
+        Args:
+            block_limit (int): the number of blocks to process synchronously. defaults to 1000. set to 0 to block until the wallet is fully rebuilt.
         """
         blockcount = 0
-        while self._current_height <= Blockchain.Default().Height and blockcount < 500:
+        while self._current_height <= Blockchain.Default().Height and (block_limit == 0 or blockcount < block_limit):
 
             block = Blockchain.Default().GetBlockByHeight(self._current_height)
 
@@ -856,7 +867,8 @@ class Wallet(object):
         Returns:
             bool: the provided password matches with the stored password.
         """
-        return hashlib.sha256(password.encode('utf-8')).digest() == self.LoadStoredData('PasswordHash')
+        password = to_aes_key(password)
+        return hashlib.sha256(password).digest() == self.LoadStoredData('PasswordHash')
 
     def GetStandardAddress(self):
         """
@@ -897,7 +909,8 @@ class Wallet(object):
                 return contract.ScriptHash
 
         if len(self._contracts.values()):
-            return self._contracts.values()[0]
+            for k, v in self._contracts.items():
+                return v
 
         raise Exception("Could not find change address")
 
@@ -1046,8 +1059,17 @@ class Wallet(object):
 
         for key, unspents in paycoins.items():
             if unspents is None:
-                logger.error("insufficient funds for asset id: %s " % key)
-                return None
+                if not self.IsSynced:
+                    logger.warn("Wait for your wallet to be synced before doing "
+                                "transactions. To check enter 'wallet' and look at "
+                                "'percent_synced', it should be 100. Also the blockchain "
+                                "should be up to the latest blocks (see Progress). Issuing "
+                                "'wallet rebuild' restarts the syncing process.")
+                    return None
+
+                else:
+                    logger.error("insufficient funds for asset id: %s " % key)
+                    return None
 
         input_sums = {}
 
@@ -1194,6 +1216,23 @@ class Wallet(object):
             elif type(asset) is NEP5Token:
                 balances.append((asset.symbol, self.GetBalance(asset)))
         return balances
+
+    @property
+    def IsSynced(self):
+        """
+        Check if wallet is synced.
+
+        Returns:
+            bool: True if wallet is synced.
+
+        """
+        if Blockchain.Default().Height == 0:
+            return False
+
+        if (int(100 * self._current_height / Blockchain.Default().Height)) < 100:
+            return False
+        else:
+            return True
 
     def ToJson(self, verbose=False):
         # abstract
