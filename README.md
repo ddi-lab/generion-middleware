@@ -31,9 +31,9 @@ Data sellers and buyers can execute smart contracts and transfer the specified d
 
 ### 4.	Technical
 
-- [SmartContract](https://github.com/ddi-lab/generion-middleware/blob/master/identity/sc/access-store.py). Written in python. Compiled with neo-boa 0.2.2
+- [SmartContract](https://github.com/ddi-lab/generion-middleware/blob/master/identity/sc/access-store.py). Written in python. Compiled with neo-boa 0.3.3
 
-- [Middleware](https://github.com/ddi-lab/generion-middleware/blob/master/identity/api.py). Written in python. Based on neo-python of dev branch version 0.4.7
+- [Middleware](https://github.com/ddi-lab/generion-middleware/blob/master/identity/api.py). Written in python. Based on neo-python 0.5.3
 
 - [DataSource](https://github.com/ddi-lab/generion-datasource). Written on Java + Cassandra
 
@@ -41,19 +41,22 @@ Data sellers and buyers can execute smart contracts and transfer the specified d
 
 ### 5.	 Smart – contract
 
-The smart contract stores following records: {**usr_adr** (user address), **data_pub_key** (public key, with which data is encrypted), **data_encr** (the encrypted data itself, including the *data store address*, the *address of the document* in this store, and the *private key* with which you can decrypt it document)}.
+The smart contract stores following records: {**usr_adr** (user's address), **data_pub_key** (public key, with which data is encrypted), **creator_adr** (who has written the data), **is_verified** (whether the record is confirmed by the user), **data_encr** (the encrypted data itself, including the *data store address*, the *address of the document* in this store, and the *private key* with which you can decrypt it document)}.
 
-Access to read records is available to all users, which allows you to track the history of changes and ensures transparency of ongoing operations. However, each user has *CREATE / DELETE* access only for his records, which guarantees the integrity of the data. Confidentiality is maintained by cryptography with public key, it is assumed that each user has a pair of keys: private and public. The public key encrypts the data in such a way that only he can decrypt the data, possessing a private key.
+Everyone can access records *(but not the encrypted contents inside!)* of everyone, which provides the possibility to track the history of changes and ensures transparency of ongoing operations. Confidentiality is maintained by cryptography with public key, it is assumed that each user has a pair of keys: private and public. The public key encrypts the data in such a way that only he can decrypt the data, possessing a private key. Sharing the public key allows other parties to write data to user's address. However, the record should be verified by the data owner in order to avoid mistakes and to guarantee the integrity of the data.
 
-There is a possibility to sell data. To do this person can leave a request containing a list of records that he wants to sell, indicating at the same time the reward that he wants to receive. The party interested in purchasing the data can track the orders that are relevant for him, and buy the actual information by sending a transaction to blockchain with a token, containing a unique application identifier and a public key to which the data stored in the record that should be encrypted. The information about all the transactions carried out is stored in blockchain and is completely transparent to all. At the moment data sharing is implemented like a data purchase for 0 tokens, it will be reconstructed into a standalone mechanism in the nearest future.
+There is a possibility to sell data. To do this person can leave a request containing a list of records that he wants to sell, indicating at the same time the reward that he wants to receive. The party interested in purchasing the data can track the orders that are relevant for him, and buy the actual information by sending a transaction to blockchain with a token, containing a unique application identifier and a public key to which the data stored in the record should be encrypted. The information about all the transactions carried out is stored in blockchain and is completely transparent to everyone.
 
 
 ### 6.	API 
 
 - `getUserList []`	= Get list of all users having their records
+- `setUserPubKey [usr_adr, pub_key]` = Set user's public key
+- `getUserPubKey [usr_adr]` = Get user's public key
 - `getRecordList [usr_adr]` = Get list of the contents of all records of the specific user
 - `getRecordIdList [usr_adr]` = Get list of the ids of all records of the specific user
-- `createRecord [usr_adr, data_pub_key, data_encr]` = Create a new record (access restricted)
+- `createRecord [creator_adr, usr_adr, data_pub_key, data_encr]` = Create a new record (access restricted)
+- `verifyRecord [record_id]` = Verify the record is correct (access restricted)
 - `getRecord [record_id]` = Get the specific record
 - `deleteRecord [record_id]` = Delete the specific record (access restricted)
 - `getOrderList []` = Get list of contents of all orders in the system
@@ -81,7 +84,7 @@ neo> wallet rebuild
 ```
 4. You may invoke SmartContract methods from inside CLI
 ```
-neo> testinvoke 99f7a7b998b8b5c792a1572d2f0caa250f17c7e8 getUserList []
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getUserList []
 ```  
 3. You can also run middleware to use REST API
 ``` 

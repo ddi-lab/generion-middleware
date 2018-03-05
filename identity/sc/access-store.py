@@ -27,21 +27,21 @@ neo> contract search ...
 
 Using:
 
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 setUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT", "PUB_KEY"]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getUserList []
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 createRecord ["AG92fB2ZM7wnRXcxp7sn5CWiNVkJmXYwy6","AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 verifyRecord [1]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getRecord [1]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 deleteRecord [1]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getOrderList []
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getOrderIdList []
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 getOrder [1]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 deleteOrder [1]
-neo> testinvoke 6338d6702c728e13ebaad01c5eb89d2b0806e509 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 setUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT", "PUB_KEY"]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getUserPubKey ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getUserList []
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getRecordList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getRecordIdList ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT"]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 createRecord ["AG92fB2ZM7wnRXcxp7sn5CWiNVkJmXYwy6","AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","DATA_PUB_KEY","DATA_ENCR"]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 verifyRecord [1]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getRecord [1]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 deleteRecord [1]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getOrderList []
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getOrderIdList []
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 createOrder ["AYRd6wrG1BXDwbBMrg3nQFD6jH2uEvN4ZT","1:2:3",2]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 getOrder [1]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 deleteOrder [1]
+neo> testinvoke 1bc5b3eda086169dac515353e5d914c20cf08c56 purchaseData [1,"03d8a47c4d9c33e552c93195b9b23b81c2372bc36bf15d9ac9b2b5f985bf837282"] --attach-neo=3
 
 """
 from boa.interop.Neo.Runtime import Log, Notify
@@ -54,8 +54,8 @@ from boa.interop.System.ExecutionEngine import GetScriptContainer, GetExecutingS
 from boa.builtins import concat, list, range, substr
 
 # Script hash of the contract owner
-#OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
-OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
+OWNER = b'\x04\x00A\xfb4\xd5\xa1\t\xce\xe7\x03\x1b\x7fD4\xc2\xec\xf9\xcd\xf4'  #coz-test-wallet.db3
+# OWNER = b'#\xba\'\x03\xc52c\xe8\xd6\xe5"\xdc2 39\xdc\xd8\xee\xe9'  # neo-privnet.wallet
 
 # Constants
 NEO_ASSET_ID = b'\x9b|\xff\xda\xa6t\xbe\xae\x0f\x93\x0e\xbe`\x85\xaf\x90\x93\xe5\xfeV\xb3J\\"\x0c\xcd\xcfn\xfc3o\xc5'
